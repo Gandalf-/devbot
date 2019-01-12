@@ -1,6 +1,6 @@
 name:                devbot
 version:             0.1.0.0
-synopsis:            Simple project template from stack
+synopsis:            A lightweight, inspectable task scheduler
 description:         Please see README.md
 homepage:            https://github.com/bitemyapp/hello#readme
 license:             BSD3
@@ -40,7 +40,7 @@ executable devbot
 library
   hs-source-dirs:
     .
-    ../apocrypha
+    ../apocrypha-haskell
 
   ghc-options:
     -Wall

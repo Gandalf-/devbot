@@ -60,3 +60,15 @@ embedding in your Tmux status line.
 - Stopped  ✗
 - StalePid ?
 - Database !
+
+# Building
+
+Devbot relies on [Apocrypha](https://github.com/Gandalf-/apocrypha-haskell) to
+store run time information, it must be cloned along side devbot to compile.
+
+```
+$ git clone https://github.com/Gandalf-/devbot
+$ git clone https://github.com/Gandalf-/apocrypha-haskell
+$ cd devbot
+$ make release
+```

@@ -5,12 +5,12 @@ module Devbot.List
 import           ColorText
 import           Devbot.Core
 
-import           Data.List             (intercalate)
+import           Data.List             (intercalate, sortOn)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 
 
 runList :: IO ()
-runList = events >>= mapM_ printEvent
+runList = sortOn _name <$> events >>= mapM_ printEvent
 
 
 printEvent :: Event -> IO ()

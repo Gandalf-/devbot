@@ -70,6 +70,7 @@ library
     bytestring,
     directory,
     network,
+    filepath,
     process,
     text,
     time,

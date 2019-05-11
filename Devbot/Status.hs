@@ -32,7 +32,7 @@ checkStarted = do
 checkRunning :: IO ()
 checkRunning = do
         pid  <- pfile >>= readFile
-        code <- spawnCommand ("kill -0 " ++ pid) >>= waitForProcess
+        code <- spawnCommand ("kill -0 " <> pid) >>= waitForProcess
 
         case code of
             ExitSuccess -> status Running
@@ -40,7 +40,7 @@ checkRunning = do
 
 
 pfile :: IO String
-pfile = (++ "/.devbot/pid") <$> getHomeDirectory
+pfile = (<> "/.devbot/pid") <$> getHomeDirectory
 
 data Status = Stopped
             | Running

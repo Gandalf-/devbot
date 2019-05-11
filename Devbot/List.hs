@@ -34,13 +34,13 @@ printAction :: Config -> String
 printAction (Config a _ _ )  =
         decorate _action blue
     where
-        _action = "    " ++ intercalate pad a
+        _action = "    " <> intercalate pad a
         pad     = "\n    "
 
 
 printInterval :: Config -> String
 printInterval (Config _ i _) =
-        decorate ("    every " ++ prettyTime i) cyan
+        decorate ("    every " <> prettyTime i) cyan
 
 
 printOptional :: Config -> Data -> String
@@ -51,19 +51,19 @@ printOptional (Config _ _ req) (Data d _ errs) =
                ]
     where
         printErrors :: Integer -> String
-        printErrors e = ", " ++ decorate (show e ++ " errors") red
+        printErrors e = ", " <> decorate (show e <> " errors") red
 
         printDuration :: Integer -> String
         printDuration _d =
-            ", " ++ decorate ("took " ++ show _d ++ " seconds") cyan
+            ", " <> decorate ("took " <> show _d <> " seconds") cyan
 
         printRequire :: String -> String
-        printRequire r = ", requires " ++ r
+        printRequire r = ", requires " <> r
 
 
 printNext :: Data -> Integer -> String
 printNext (Data _ w _) time
-        | w - time > 0 = decorate ("next in " ++ t) yellow
+        | w - time > 0 = decorate ("next in " <> t) yellow
         | otherwise    = decorate "now" yellow
     where
         t = prettyTime $ w - time
@@ -71,10 +71,10 @@ printNext (Data _ w _) time
 
 prettyTime :: Integer -> String
 prettyTime i
-        | i <= minute = show i ++ " seconds"
-        | i <= hour   = show (div i minute) ++ " minutes"
-        | i <= day    = show (div i hour) ++ " hours"
-        | otherwise   = show (div i day) ++ " days"
+        | i <= minute = show i <> " seconds"
+        | i <= hour   = show (div i minute) <> " minutes"
+        | i <= day    = show (div i hour) <> " hours"
+        | otherwise   = show (div i day) <> " days"
     where
         day = 86400
         hour = 3600

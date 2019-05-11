@@ -170,7 +170,7 @@ flush (Event n _ d) = set' ["devbot", "data", n] d
 logger :: String -> IO ()
 logger msg = do
         time <- getTime
-        putStrLn $ "devbot: " ++ show time ++ " " ++ msg
+        putStrLn $ "devbot: " <> show time <> " " <> msg
 
 
 requirementsMet :: String -> Config -> IO Bool
@@ -190,10 +190,10 @@ requirementsMet n (Config _ _ (Just r)) = do
                 _           -> logger cmdFailed >> pure False
 
         doesntExist =
-          n ++ " references requirement that doesn't exist"
+          n <> " references requirement that doesn't exist"
 
         cmdFailed =
-          "requirement " ++ r ++ " for " ++ n ++ " not met"
+          "requirement " <> r <> " for " <> n <> " not met"
 
 
 getTime :: IO Integer

@@ -35,12 +35,13 @@ resolver: lts-12.14
 #  - wai
 packages:
 - .
-- ../apocrypha-haskell
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
-# extra-deps: []
+extra-deps:
+   - git: https://github.com/Gandalf-/apocrypha-haskell/
+     commit: ba74abc33537ae63ef5ab73460f005856b1c4ef2
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -50,6 +50,7 @@ data Config = Config
         { action   :: ![String]
         , interval :: !Integer
         , require  :: !(Maybe String)
+        , parallel :: !Bool
         }
     deriving (Eq, Show, Generic)
 
@@ -74,6 +75,14 @@ instance FromJSON Config where
             ]
 
         require  <- o .:? "require"
+
+        -- parallel may not exist or be a bool
+        parallel <- asum [
+            do p <- o .:? "parallel"
+               case p of
+                   (Just (Bool b)) -> pure b
+                   _               -> pure False
+             ]
 
         return Config{..}
       where

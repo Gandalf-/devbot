@@ -53,6 +53,7 @@ library
   exposed-modules:
     Devbot.Core
     Devbot.List
+    Devbot.Load
     Devbot.Status
     Devbot.Bot
     ColorText
@@ -65,6 +66,7 @@ library
   build-depends:
     base >= 4.7 && < 5,
     aeson,
+    yaml,
     apocrypha,
     binary,
     bytestring,

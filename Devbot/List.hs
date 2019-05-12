@@ -31,7 +31,7 @@ printName name = decorate name green
 
 
 printAction :: Config -> String
-printAction (Config a _ _ )  =
+printAction (Config a _ _ _)  =
         decorate _action blue
     where
         _action = "    " <> intercalate pad a
@@ -39,15 +39,16 @@ printAction (Config a _ _ )  =
 
 
 printInterval :: Config -> String
-printInterval (Config _ i _) =
+printInterval (Config _ i _ _) =
         decorate ("    every " <> prettyTime i) cyan
 
 
 printOptional :: Config -> Data -> String
-printOptional (Config _ _ req) (Data d _ errs) =
+printOptional (Config _ _ req par) (Data d _ errs) =
         concat [ maybe "" printErrors errs
                , printDuration d
                , maybe "" printRequire req
+               , printParallel par
                ]
     where
         printErrors :: Integer -> String
@@ -59,6 +60,10 @@ printOptional (Config _ _ req) (Data d _ errs) =
 
         printRequire :: String -> String
         printRequire r = ", requires " <> r
+
+        printParallel :: Bool -> String
+        printParallel True = ", " <> decorate "parallel" magenta
+        printParallel _    = ""
 
 
 printNext :: Data -> Integer -> String
@@ -86,16 +91,19 @@ now = round <$> getPOSIXTime
 
 
 blue :: Decoration
-blue   = (Blue,   NoColor, Null)
+blue = (Blue,   NoColor, Null)
 
 green :: Decoration
-green  = (Green,  NoColor, Bold)
+green = (Green,  NoColor, Bold)
 
 yellow :: Decoration
 yellow = (Yellow, NoColor, Null)
 
 red :: Decoration
-red    = (Red,    NoColor, Null)
+red = (Red,    NoColor, Null)
 
 cyan :: Decoration
-cyan   = (Cyan,   NoColor, Null)
+cyan = (Cyan,   NoColor, Null)
+
+magenta :: Decoration
+magenta = (Magenta,   NoColor, Null)

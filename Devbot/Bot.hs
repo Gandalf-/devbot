@@ -5,6 +5,8 @@ module Devbot.Bot
 import           Control.Concurrent    (threadDelay)
 import           Control.Monad         (forever)
 import           Data.List             (intercalate)
+import           Data.Maybe            (catMaybes, isNothing)
+import           Data.Time.Clock       (getCurrentTime)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import           System.Exit           (ExitCode (..))
 import           System.IO             (BufferMode (..), hSetBuffering, stdout)
@@ -19,7 +21,7 @@ type State = [Task]
 
 data Task = Task
           { _event   :: Event
-          , _process :: Maybe ProcessHandle
+          , _process :: [ProcessHandle]
           , _start   :: Integer
           }
 
@@ -34,7 +36,7 @@ runBot = do
 
 
 startingState :: [Event] -> State
-startingState = map (\ event -> Task event Nothing 0)
+startingState = map (\ event -> Task event [] 0)
 
 
 runner :: Integer -> State -> IO State
@@ -53,13 +55,13 @@ runner runs state =
         minRunsToRestart = 60 * 5
 
         noRunners :: State -> Bool
-        noRunners []                       = True
-        noRunners (Task _ Nothing  _ : xs) = noRunners xs
-        noRunners (Task _ (Just _) _ : _ ) = False
+        noRunners []                  = True
+        noRunners (Task _ []  _ : xs) = noRunners xs
+        noRunners (Task{} : _ )       = False
 
 
 handle :: Task -> IO Task
-handle task@(Task (Event _ _ d) Nothing _) = do
+handle task@(Task (Event _ _ d) [] _) = do
         -- not currently running
         time <- getTime
 
@@ -70,15 +72,17 @@ handle task@(Task (Event _ _ d) Nothing _) = do
         ready :: Integer -> Data -> Bool
         ready now (Data _ _when _) = now > _when
 
-handle task@(Task _ (Just h) _) = do
-        code <- getProcessExitCode h
-        case code of
-            -- still running
-            Nothing          -> pure task
+handle task@(Task _ hs _) = do
+        codes <- mapM getProcessExitCode hs
 
-            -- finished
-            Just ExitSuccess -> success task
-            Just _           -> failure task
+        if any isNothing codes
+            -- something is still running
+            then pure task
+
+            -- all processes finished
+            else if all (== ExitSuccess) $ catMaybes codes
+                     then success task
+                     else failure task
 
 
 check :: Task -> IO Task
@@ -95,12 +99,18 @@ check task@(Task (Event n c d) p s) = do
 
 
 run :: Task -> IO Task
-run (Task event@(Event _ (Config c _ _) _) _ _) = do
-        -- start running the actions, add handle to Task
+run (Task event@(Event _ (Config actions _ _ True) _) _ _) = do
+        -- parallel, start the actions independently, add handles to Task
+        hs <- mapM spawnCommand actions
+        Task event hs <$> getTime
+
+run (Task event@(Event _ (Config actions _ _ False) _) _ _) = do
+        -- serial, build command, start, add handle to task
         h <- spawnCommand cmd
-        Task event (Just h) <$> getTime
+        Task event [h] <$> getTime
     where
-        cmd = intercalate " &&\n" c
+        cmd = intercalate " && " $ map braceShell actions
+        braceShell x = "{ " <> x <> " ; }"
 
 
 success :: Task -> IO Task
@@ -110,7 +120,7 @@ success (Task event@(Event _ c _) _ startTime) = do
         elapsed <- negate . (startTime -) <$> getTime
 
         let newEvent = clearErrors $ updateTime event next elapsed
-            newTask  = Task newEvent Nothing 0
+            newTask  = Task newEvent [] 0
 
         flush newEvent
         pure newTask
@@ -130,12 +140,11 @@ failure (Task event@(Event n _ d) _ startTime) = do
                         , " failed, backing off "
                         , show backoff, " seconds"]
 
-        -- next <- getTime >>= (pure . (+ 1))
         next <- (+ backoff) <$> getTime
         elapsed <- negate . (startTime -) <$> getTime
 
         let newEvent = incrementError $ updateTime event next elapsed
-            newTask  = Task newEvent Nothing 0
+            newTask  = Task newEvent [] 0
 
         flush newEvent
         pure newTask
@@ -143,8 +152,8 @@ failure (Task event@(Event n _ d) _ startTime) = do
         backoff = getBackoff d
 
         getBackoff :: Data -> Integer
-        getBackoff (Data _ _ Nothing)  = 10
-        getBackoff (Data _ _ (Just e)) = (e + 1) * 10
+        getBackoff (Data _ _ Nothing)  = 30
+        getBackoff (Data _ _ (Just e)) = (e + 1) * 60
 
         incrementError :: Event -> Event
         incrementError (Event _n _c (Data _d _w Nothing)) =
@@ -160,7 +169,7 @@ updateTime (Event n c (Data _ _ e)) newTime elapsed =
 
 
 nextRun :: Integer -> Config -> Integer
-nextRun time (Config _ _interval _) = time + _interval
+nextRun time (Config _ _interval _ _) = time + _interval
 
 
 flush :: Event -> IO ()
@@ -169,13 +178,13 @@ flush (Event n _ d) = set' ["devbot", "data", n] d
 
 logger :: String -> IO ()
 logger msg = do
-        time <- getTime
+        time <- getCurrentTime
         putStrLn $ "devbot: " <> show time <> " " <> msg
 
 
 requirementsMet :: String -> Config -> IO Bool
-requirementsMet _ (Config _ _ Nothing) = pure True
-requirementsMet n (Config _ _ (Just r)) = do
+requirementsMet _ (Config _ _ Nothing _) = pure True
+requirementsMet n (Config _ _ (Just r) _) = do
         req <- get' ["devbot", "requirements", r]
 
         case req of

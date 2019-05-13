@@ -54,6 +54,7 @@ library
     Devbot.List
     Devbot.Load
     Devbot.Status
+    Devbot.Schema
     Devbot.Bot
     ColorText
 

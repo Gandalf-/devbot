@@ -11,14 +11,13 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Maybe          (fromMaybe)
 import qualified Data.Text           as T
 import           GHC.Generics
-import           Text.Read           (readMaybe)
 
 import           Apocrypha.Client
+import           Devbot.Parser
 
 
 -- | Event
 -- wrapper for the data stored in 'data' and 'events'
-
 data Event = Event
        { _name   :: !String
        , _config :: !Config
@@ -29,7 +28,6 @@ data Event = Event
 
 -- | Data
 -- run time information for a devbot action, populated by devbot
-
 data Data = Data
         { duration :: !Integer
         , when     :: !Integer
@@ -45,7 +43,6 @@ instance ToJSON Data where
 
 -- | Config
 -- devbot action specification, comes from config file
-
 data Config = Config
         { action   :: ![String]
         , interval :: !Integer
@@ -70,7 +67,10 @@ instance FromJSON Config where
             do i <- o .: "interval"
                case i of
                    (Number _)            -> parseJSON i
-                   (Data.Aeson.String s) -> return . parse . T.unpack $ s
+                   (Data.Aeson.String s) ->
+                        case parseTime . T.unpack $ s of
+                            Nothing -> fail ""
+                            Just v  -> pure v
                    _                     -> fail ""
             ]
 
@@ -85,17 +85,6 @@ instance FromJSON Config where
              ]
 
         return Config{..}
-      where
-          parse :: String -> Integer
-          parse "hourly" = hour
-          parse "daily"  = daily
-          parse "weekly" = weekly
-          parse n        = fromMaybe daily (readMaybe n :: Maybe Integer)
-
-          weekly = daily * 7
-          daily  = hour * 24
-          hour   = minute * 60
-          minute = 60
 
 instance ToJSON Config where
     toEncoding = genericToEncoding defaultOptions

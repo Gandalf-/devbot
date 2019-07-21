@@ -55,6 +55,7 @@ library
     Devbot.Load
     Devbot.Status
     Devbot.Schema
+    Devbot.Parser
     Devbot.Bot
     ColorText
 
@@ -71,3 +72,31 @@ library
     time,
     unordered-containers,
     vector
+
+
+test-suite bot
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  type:                exitcode-stdio-1.0
+
+  default-language:    Haskell2010
+  build-depends:
+    base >= 4.7 && < 5,
+    hspec,
+    QuickCheck,
+    aeson,
+    yaml,
+    apocrypha,
+    devbot,
+    directory,
+    filepath,
+    process,
+    text,
+    time,
+    unordered-containers,
+    vector
+
+  other-modules:
+    ParserSpec
+
+  build-tool-depends: hspec-discover:hspec-discover == 2.*

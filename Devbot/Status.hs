@@ -2,10 +2,13 @@ module Devbot.Status
     ( runStatus
     ) where
 
-import           Apocrypha.Client (keys')
-import           System.Directory (doesFileExist, getHomeDirectory)
-import           System.Exit      (ExitCode (..))
-import           System.Process   (spawnCommand, waitForProcess)
+import           System.Directory      (doesFileExist, getHomeDirectory)
+import           System.Exit           (ExitCode (..))
+import           System.FilePath.Posix ((</>))
+import           System.Info           (os)
+import           System.Process        (spawnCommand, waitForProcess)
+
+import           Devbot.Persistence
 
 
 runStatus :: IO ()
@@ -13,11 +16,18 @@ runStatus = do
         databaseAlive <- checkAlive
 
         if databaseAlive
-            then checkStarted
+            then if os == "mingw32"
+                -- nothing further to do on Windows
+                then status StalePid
+
+                -- check if we have our pid
+                else checkStarted
             else status Database
     where
         checkAlive :: IO Bool
-        checkAlive = not . null <$> keys' ["devbot"]
+        checkAlive = do
+            cx <- defaultContext
+            not . null <$> keys cx ["devbot"]
 
 
 checkStarted :: IO ()
@@ -40,7 +50,7 @@ checkRunning = do
 
 
 pfile :: IO String
-pfile = (<> "/.devbot/pid") <$> getHomeDirectory
+pfile = (</> ".devbot" </> "pid") <$> getHomeDirectory
 
 data Status = Stopped
             | Running

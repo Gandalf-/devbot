@@ -12,8 +12,8 @@ import           Data.Maybe          (fromMaybe)
 import qualified Data.Text           as T
 import           GHC.Generics
 
-import           Apocrypha.Client
 import           Devbot.Parser
+import           Devbot.Persistence
 
 
 -- | Event

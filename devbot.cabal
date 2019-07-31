@@ -56,6 +56,7 @@ library
     Devbot.Status
     Devbot.Schema
     Devbot.Parser
+    Devbot.Persistence
     Devbot.Bot
     ColorText
 

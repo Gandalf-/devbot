@@ -9,12 +9,13 @@ import           Data.Maybe            (catMaybes, isNothing)
 import           Data.Time.Clock       (getCurrentTime)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import           System.Exit           (ExitCode (..))
+import           System.Info           (os)
 import           System.IO             (BufferMode (..), hSetBuffering, stdout)
 import           System.Process        (ProcessHandle, getProcessExitCode,
                                         spawnCommand, waitForProcess)
 
-import           Apocrypha.Client
 import           Devbot.Core
+import           Devbot.Persistence
 
 
 type State = [Task]
@@ -32,7 +33,7 @@ runBot = do
         hSetBuffering stdout LineBuffering
 
         forever $
-          events >>= runner 1 . startingState
+            events >>= runner 1 . startingState
 
 
 startingState :: [Event] -> State
@@ -109,7 +110,13 @@ run (Task event@(Event _ (Config actions _ _ False) _) _ _) = do
         h <- spawnCommand cmd
         Task event [h] <$> getTime
     where
-        cmd = intercalate " && " $ map braceShell actions
+        cmd = if os == "mingw32"
+            -- powershell or cmd
+            then intercalate " ; " actions
+
+            -- POSIX shell
+            else intercalate " && " $ map braceShell actions
+
         braceShell x = "{ " <> x <> " ; }"
 
 
@@ -173,7 +180,9 @@ nextRun time (Config _ _interval _ _) = time + _interval
 
 
 flush :: Event -> IO ()
-flush (Event n _ d) = set' ["devbot", "data", n] d
+flush (Event n _ d) = do
+        cx <- defaultContext
+        set cx ["devbot", "data", n] d
 
 
 logger :: String -> IO ()
@@ -185,7 +194,8 @@ logger msg = do
 requirementsMet :: String -> Config -> IO Bool
 requirementsMet _ (Config _ _ Nothing _) = pure True
 requirementsMet n (Config _ _ (Just r) _) = do
-        req <- get' ["devbot", "requirements", r]
+        cx  <- defaultContext
+        req <- get cx ["devbot", "requirements", r]
 
         case req of
             Nothing  -> logger doesntExist >> pure False

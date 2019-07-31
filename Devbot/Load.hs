@@ -2,16 +2,17 @@
 
 module Devbot.Load where
 
-import           Apocrypha.Client      (defaultContext, get, set)
 import           Data.Aeson            (defaultOptions, genericToEncoding)
 import qualified Data.HashMap.Strict   as HM
 import           Data.Maybe            (fromMaybe)
 import qualified Data.Text             as T
 import           Data.Yaml
-import           Devbot.Core           (Config, DataMap)
 import           GHC.Generics
 import           System.Directory      (getHomeDirectory)
 import           System.FilePath.Posix ((</>))
+
+import           Devbot.Core           (Config, DataMap)
+import           Devbot.Persistence
 
 
 data FileConfig = FileConfig

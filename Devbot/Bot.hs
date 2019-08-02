@@ -6,7 +6,8 @@ import           Data.List
 import           Data.Maybe            (catMaybes, isNothing)
 import           Data.Time.Clock       (getCurrentTime)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
-import           System.Exit           (ExitCode (..))
+import           System.Exit           (ExitCode (..), die)
+import           System.Info           (os)
 import           System.IO             (BufferMode (..), hSetBuffering, stdout)
 import           System.Process        (ProcessHandle, getProcessExitCode,
                                         spawnCommand, waitForProcess)
@@ -43,8 +44,13 @@ runBot = do
         hSetBuffering stdout LineBuffering
 
         forever $ do
-            loadDefaultConfig
-            events >>= runner cxf 1 . startingState
+            result <- loadDefaultConfig
+            case result of
+                Left err -> do
+                    logger $ "config parse error: " <> err
+                    die "cannot continue"
+
+                Right _  -> events >>= runner cxf 1 . startingState
     where
         cxf = defaultContext
 
@@ -151,14 +157,28 @@ runParallel task = do
 runSerial :: Task -> IO Task
 -- ^ run each command serially, we haven't started yet
 runSerial task@(Task e _ Nothing _)
-        | null actions = pure task  -- this indicates a bad config
-        | otherwise    = do
+        | null actions = pure task
+            -- this indicates a bad config
+
+        | useOneShell os = do
+            -- run all actions in one shell, not possible on Windows
+            h <- spawnCommand command
+            Task e [h] Nothing <$> getTime
+
+        | otherwise = do
+            -- run each action in a separate shell
             h <- spawnCommand firstCmd
             Task e [h] laterCmds <$> getTime
     where
         actions   = action $ _config e
         firstCmd  = head actions
         laterCmds = Just $ tail actions
+
+        useOneShell "mingw32" = False
+        useOneShell _         = oneshell $ _config e
+
+        command      = intercalate " && " $ map braceShell actions
+        braceShell x = "{ " <> x <> " ; }"
 
 runSerial task@(Task e _ (Just cs) s)
 -- ^ we've already started, start the next cmd
@@ -227,7 +247,7 @@ updateTime (Event n c (Data _ _ e)) newTime elapsed =
 
 
 nextRun :: Integer -> Config -> Integer
-nextRun time (Config _ _interval _ _) = time + _interval
+nextRun time config = time + interval config
 
 
 flush :: ContextF -> Event -> IO ()
@@ -243,8 +263,8 @@ logger msg = do
 
 
 requirementsMet :: ContextF -> String -> Config -> IO Bool
-requirementsMet _   _ (Config _ _ Nothing _)  = pure True
-requirementsMet cxf n (Config _ _ (Just r) _) = do
+requirementsMet _   _ (Config _ _ Nothing  _ _)  = pure True
+requirementsMet cxf n (Config _ _ (Just r) _ _) = do
         cx  <- cxf
         req <- get cx ["devbot", "requirements", r]
 

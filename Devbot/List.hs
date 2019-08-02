@@ -31,24 +31,25 @@ printName name = decorate name green
 
 
 printAction :: Config -> String
-printAction (Config a _ _ _)  =
+printAction c =
         decorate _action blue
     where
-        _action = "    " <> intercalate pad a
+        _action = "    " <> intercalate pad (action c)
         pad     = "\n    "
 
 
 printInterval :: Config -> String
-printInterval (Config _ i _ _) =
-        decorate ("    every " <> prettyTime i) cyan
+printInterval c =
+        decorate ("    every " <> prettyTime (interval c)) cyan
 
 
 printOptional :: Config -> Data -> String
-printOptional (Config _ _ req par) d =
+printOptional (Config _ _ req par one) d =
         concat [ maybe "" printErrors $ _errors d
                , printDuration $ _duration d
                , maybe "" printRequire req
                , printParallel par
+               , printOneShell one
                ]
     where
         printErrors :: Integer -> String
@@ -66,6 +67,10 @@ printOptional (Config _ _ req par) d =
         printParallel :: Bool -> String
         printParallel True = ", " <> decorate "parallel" magenta
         printParallel _    = ""
+
+        printOneShell :: Bool -> String
+        printOneShell True = ", " <> decorate "one-shell" magenta
+        printOneShell _    = ""
 
 
 printNext :: Data -> Integer -> String

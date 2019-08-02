@@ -18,7 +18,14 @@ main = do
             ["list"]       -> runList
             ["status"]     -> runStatus
             ["schema"]     -> runSchema
-            ["load"]       -> defaultConfigPath >>= runLoadConfig
+
+            ["load"]       -> do
+                result <- defaultConfigPath >>= runLoadConfig
+                case result of
+                    Left err -> die $ "parse error reading config: " <> err
+                    _        -> pure ()
+
+            -- help text
             _              -> defaultConfigPath >>= die . usage
 
 

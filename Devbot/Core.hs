@@ -48,6 +48,7 @@ data Config = Config
         , interval :: !Integer
         , require  :: !(Maybe String)
         , parallel :: !Bool
+        , oneshell :: !Bool
         }
     deriving (Eq, Show, Generic)
 
@@ -79,6 +80,14 @@ instance FromJSON Config where
         -- parallel may not exist or be a bool
         parallel <- asum [
             do p <- o .:? "parallel"
+               case p of
+                   (Just (Bool b)) -> pure b
+                   _               -> pure False
+             ]
+
+        -- one_shell may not exist or be a bool
+        oneshell <- asum [
+            do p <- o .:? "oneshell"
                case p of
                    (Just (Bool b)) -> pure b
                    _               -> pure False

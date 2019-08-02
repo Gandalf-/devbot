@@ -26,8 +26,7 @@ instance FromJSON FileConfig where
 instance ToJSON FileConfig where
     toEncoding = genericToEncoding defaultOptions
 
-
-loadDefaultConfig :: IO ()
+loadDefaultConfig :: IO (Either String ())
 loadDefaultConfig = defaultConfigPath >>= runLoadConfig
 
 
@@ -35,12 +34,12 @@ defaultConfigPath :: IO FilePath
 defaultConfigPath = (</> ".devbot" </> "config.yml") <$> getHomeDirectory
 
 
-runLoadConfig :: FilePath -> IO ()
+runLoadConfig :: FilePath -> IO (Either String ())
 runLoadConfig path = decodeFileEither path >>= setConfig
 
 
-setConfig :: Either ParseException FileConfig -> IO ()
-setConfig (Left es) = print es
+setConfig :: Either ParseException FileConfig -> IO (Either String ())
+setConfig (Left es) = pure $ Left $ show es
 
 setConfig (Right es) = do
         cx <- defaultContext
@@ -58,3 +57,5 @@ setConfig (Right es) = do
 
         -- reapply pre-existing runtime data
         set cx ["devbot", "data"] validData
+
+        pure $ Right ()

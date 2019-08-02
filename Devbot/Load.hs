@@ -27,6 +27,10 @@ instance ToJSON FileConfig where
     toEncoding = genericToEncoding defaultOptions
 
 
+loadDefaultConfig :: IO ()
+loadDefaultConfig = defaultConfigPath >>= runLoadConfig
+
+
 defaultConfigPath :: IO FilePath
 defaultConfigPath = (</> ".devbot" </> "config.yml") <$> getHomeDirectory
 

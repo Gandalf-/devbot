@@ -8,17 +8,17 @@ parseTime = parse . words
 -- | Attempt to parse natural language into an equivalent number of seconds
 parse :: [String] -> Maybe Integer
 
-parse ["hourly"] = Just hour
-parse ["daily"]  = Just day
-parse ["weekly"] = Just week
+parse ["hourly"]  = Just hour
+parse ["daily"]   = Just day
+parse ["weekly"]  = Just week
 parse ["monthly"] = Just month
 
-parse ["second"] = Just 1
-parse ["minute"] = Just minute
-parse ["hour"]   = Just hour
-parse ["day"]    = Just day
-parse ["week"]   = Just week
-parse ["month"]  = Just month
+parse ["second"]  = Just 1
+parse ["minute"]  = Just minute
+parse ["hour"]    = Just hour
+parse ["day"]     = Just day
+parse ["week"]    = Just week
+parse ["month"]   = Just month
 
 parse ["seconds"] = Just 1
 parse ["minutes"] = Just minute
@@ -36,18 +36,38 @@ parse ["every", x] = parse [x]
 parse ("every":x:y) = result
     where
         result = (*) <$> number <*> next
-        number = readMaybe x :: Maybe Integer
+        number = readNumber x
         next   = parse y
 
 parse (x:"times":"per":y) = result
     where
         result = div <$> next <*> number
-        number = readMaybe x :: Maybe Integer
+        number = readNumber x
         next   = parse y
 
 parse _           = Nothing
 
 
+-- | Try to be flexible in how we interpret numbers
+readNumber :: String -> Maybe Integer
+
+readNumber "one"   = Just 1
+readNumber "two"   = Just 2
+readNumber "three" = Just 3
+readNumber "four"  = Just 4
+readNumber "five"  = Just 5
+readNumber "six"   = Just 6
+readNumber "seven" = Just 7
+readNumber "eight" = Just 8
+readNumber "nine"  = Just 9
+readNumber "ten"   = Just 10
+
+-- assuming that people prefer "18" to "eighteen", we'll stop here
+
+readNumber x = readMaybe x
+
+
+-- | Constants
 month :: Integer
 month = week * 4
 

@@ -99,5 +99,6 @@ test-suite bot
 
   other-modules:
     ParserSpec
+    BotSpec
 
   build-tool-depends: hspec-discover:hspec-discover == 2.*

@@ -18,13 +18,12 @@ main = do
             ["list"]       -> runList
             ["status"]     -> runStatus
             ["schema"]     -> runSchema
-            ["load", path] -> runLoadConfig path
             ["load"]       -> defaultConfigPath >>= runLoadConfig
-            _              -> die usage
+            _              -> defaultConfigPath >>= die . usage
 
 
-usage :: String
-usage = unlines
+usage :: FilePath -> String
+usage path = unlines
     [ "devbot usage: "
     , "  start       - start the devbot daemon"
     , ""
@@ -32,6 +31,5 @@ usage = unlines
     , "  status      - give a single character summary of run state"
     , ""
     , "  schema      - show the config file schema"
-    , "  load        - load the default config file"
-    , "  load <path> - load the given config file"
+    , "  load        - load the config file: " <> path
     ]

@@ -29,9 +29,9 @@ data Event = Event
 -- | Data
 -- run time information for a devbot action, populated by devbot
 data Data = Data
-        { duration :: !Integer
-        , when     :: !Integer
-        , errors   :: !(Maybe Integer)
+        { _duration :: !Integer
+        , _when     :: !Integer
+        , _errors   :: !(Maybe Integer)
         }
     deriving (Show, Eq, Generic)
 
@@ -44,7 +44,7 @@ instance ToJSON Data where
 -- | Config
 -- devbot action specification, comes from config file
 data Config = Config
-        { action   :: ![String]
+        { action  :: ![String]
         , interval :: !Integer
         , require  :: !(Maybe String)
         , parallel :: !Bool
@@ -54,7 +54,7 @@ data Config = Config
 instance FromJSON Config where
     parseJSON = withObject "Config" $ \o -> do
         -- action may be a string or list of string
-        action   <- asum [
+        action  <- asum [
             do a <- o .: "action"
                case a of
                    (Array _)             -> parseJSON a

@@ -44,19 +44,21 @@ printInterval (Config _ i _ _) =
 
 
 printOptional :: Config -> Data -> String
-printOptional (Config _ _ req par) (Data d _ errs) =
-        concat [ maybe "" printErrors errs
-               , printDuration d
+printOptional (Config _ _ req par) d =
+        concat [ maybe "" printErrors $ _errors d
+               , printDuration $ _duration d
                , maybe "" printRequire req
                , printParallel par
                ]
     where
         printErrors :: Integer -> String
-        printErrors e = ", " <> decorate (show e <> " errors") red
+        printErrors 1 = ", " <> decorate "1 error" red
+        printErrors x = ", " <> decorate (show x <> " errors") red
 
         printDuration :: Integer -> String
-        printDuration _d =
-            ", " <> decorate ("took " <> show _d <> " seconds") cyan
+        printDuration 0 = ", " <> decorate "instant" cyan
+        printDuration 1 = ", " <> decorate "took 1 second" cyan
+        printDuration x = ", " <> decorate ("took " <> show x <> " seconds") cyan
 
         printRequire :: String -> String
         printRequire r = ", requires " <> r

@@ -3,7 +3,7 @@ module Main where
 import           System.Environment (getArgs)
 import           System.Exit        (die)
 
-import           Devbot.Bot
+import           Devbot.Bot.Core
 import           Devbot.List
 import           Devbot.Load
 import           Devbot.Schema
@@ -14,19 +14,13 @@ main :: IO ()
 main = do
         option <- getArgs
         case option of
-            ["start"]      -> runBot
-            ["list"]       -> runList
-            ["status"]     -> runStatus
-            ["schema"]     -> runSchema
-
-            ["load"]       -> do
-                result <- defaultConfigPath >>= runLoadConfig
-                case result of
-                    Left err -> die $ "parse error reading config: " <> err
-                    _        -> pure ()
+            ["start"]  -> runBot
+            ["list"]   -> runList
+            ["status"] -> runStatus
+            ["schema"] -> runSchema
 
             -- help text
-            _              -> defaultConfigPath >>= die . usage
+            _          -> defaultConfigPath >>= die . usage
 
 
 usage :: FilePath -> String

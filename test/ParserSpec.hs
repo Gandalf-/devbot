@@ -70,5 +70,14 @@ spec = do
               p "sixty times per minute" `shouldBe` Nothing
 
 
+        describe "number parsing" $
+            it "works" $
+              map readNumber numberWords `shouldBe` map Just [1..10]
+
+    where
+        numberWords = words "one two three four five six seven eight nine ten"
+
+
+
 p :: String -> Maybe Integer
 p = parseTime

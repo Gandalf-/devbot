@@ -1,10 +1,12 @@
-module BotSpec (spec) where
+module EventBotSpec (spec) where
 
 import           Apocrypha.Client
-import           Devbot.Bot
-import           Devbot.Core
-import           Test.Hspec
 
+import           Devbot.Bot.Common
+import           Devbot.Bot.Event
+import           Devbot.Event
+
+import           Test.Hspec
 
 
 spec :: Spec
@@ -88,8 +90,8 @@ spec = do
         sampleEvent = Event "sample" sampleConfig sampleData
         sampleErrorEvent = Event "sample" sampleConfig sampleErrorData
 
-        sampleConfig = Config ["echo a"] 10 Nothing False
-        sampleReqConfig = Config ["echo a"] 10 (Just "myreq") False
+        sampleConfig = Config ["echo a"] 10 Nothing False False
+        sampleReqConfig = Config ["echo a"] 10 (Just "myreq") False False
 
         sampleData = Data 0 0 Nothing
         sampleErrorData = Data 0 1 Nothing

@@ -50,14 +50,21 @@ library
     ghc-options: -O0
 
   exposed-modules:
-    Devbot.Core
+    Devbot.Event
+    Devbot.Service
+
+    Devbot.Bot.Core
+    Devbot.Bot.Event
+    Devbot.Bot.Service
+    Devbot.Bot.Common
+
     Devbot.List
     Devbot.Load
     Devbot.Status
     Devbot.Schema
     Devbot.Parser
-    Devbot.Persistence
-    Devbot.Bot
+    Devbot.Persist
+
     ColorText
 
   default-language:    Haskell2010
@@ -99,6 +106,6 @@ test-suite bot
 
   other-modules:
     ParserSpec
-    BotSpec
+    EventBotSpec
 
   build-tool-depends: hspec-discover:hspec-discover == 2.*

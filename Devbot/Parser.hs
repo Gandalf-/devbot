@@ -1,6 +1,6 @@
-module Devbot.Parser (parseTime) where
+module Devbot.Parser (parseTime, readNumber) where
 
-import           Text.Read           (readMaybe)
+import           Text.Read (readMaybe)
 
 parseTime :: String -> Maybe Integer
 parseTime = parse . words
@@ -64,7 +64,7 @@ readNumber "ten"   = Just 10
 
 -- assuming that people prefer "18" to "eighteen", we'll stop here
 
-readNumber x = readMaybe x
+readNumber x       = readMaybe x
 
 
 -- | Constants

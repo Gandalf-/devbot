@@ -2,26 +2,50 @@ module Devbot.List
     ( runList
     ) where
 
-import           ColorText
-import           Devbot.Core
-
 import           Data.List             (intercalate, sortOn)
+import           Data.Maybe            (fromMaybe)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
+
+import           Devbot.Event          (Config (..), Data (..), Event (..))
+import qualified Devbot.Event          as E
+
+import           Devbot.Service        (Service (..))
+import qualified Devbot.Service        as S
+
+import           ColorText
 
 
 runList :: IO ()
-runList = sortOn _name <$> events >>= mapM_ printEvent
+runList = do
+        sortOn E._name <$> E.events   >>= mapM_ printEvent
+        sortOn S._name <$> S.services >>= mapM_ printService
+
+
+printService :: Service -> IO ()
+-- ^ show name, action, and uptime
+printService (Service n c) = do
+        uptime <- S.getUptime n
+        now <- getTime
+        let seconds = (\x -> prettyTime $ now - x) <$> uptime
+
+        putStrLn $ concat
+            [ "service: ", printName n
+            , pad, decorate (S.action c) blue
+            , pad, decorate ("uptime " <> fromMaybe "not running" seconds) cyan, "\n"
+            ]
+    where
+        pad     = "\n    "
 
 
 printEvent :: Event -> IO ()
 printEvent (Event n c d) = do
-        time <- now
+        now <- getTime
         putStrLn $ concat
             [ printName n, "\n"
             , printAction c, "\n"
             , printInterval c
             , printOptional c d, ", "
-            , printNext d time
+            , printNext d now
             , "\n"
             ]
 
@@ -34,19 +58,19 @@ printAction :: Config -> String
 printAction c =
         decorate _action blue
     where
-        _action = "    " <> intercalate pad (action c)
+        _action = "    " <> intercalate pad (E.action c)
         pad     = "\n    "
 
 
 printInterval :: Config -> String
 printInterval c =
-        decorate ("    every " <> prettyTime (interval c)) cyan
+        decorate ("    every " <> prettyTime (E.interval c)) cyan
 
 
 printOptional :: Config -> Data -> String
 printOptional (Config _ _ req par one) d =
         concat [ maybe "" printErrors $ _errors d
-               , printDuration $ _duration d
+               , printDuration $ E._duration d
                , maybe "" printRequire req
                , printParallel par
                , printOneShell one
@@ -93,8 +117,8 @@ prettyTime i
         minute = 60
 
 
-now :: IO Integer
-now = round <$> getPOSIXTime
+getTime :: IO Integer
+getTime = round <$> getPOSIXTime
 
 
 blue :: Decoration

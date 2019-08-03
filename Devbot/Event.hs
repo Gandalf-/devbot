@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module Devbot.Core where
+module Devbot.Event where
 
 import           Data.Aeson
 import           Data.Foldable       (asum)
@@ -13,7 +13,7 @@ import qualified Data.Text           as T
 import           GHC.Generics
 
 import           Devbot.Parser
-import           Devbot.Persistence
+import           Devbot.Persist
 
 
 -- | Event
@@ -44,7 +44,7 @@ instance ToJSON Data where
 -- | Config
 -- devbot action specification, comes from config file
 data Config = Config
-        { action  :: ![String]
+        { action   :: ![String]
         , interval :: !Integer
         , require  :: !(Maybe String)
         , parallel :: !Bool

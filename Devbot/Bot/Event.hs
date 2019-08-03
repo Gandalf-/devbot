@@ -1,23 +1,13 @@
-module Devbot.Bot where
+module Devbot.Bot.Event where
 
-import           Control.Concurrent    (threadDelay)
-import           Control.Monad         (forever)
-import           Data.List
-import           Data.Maybe            (catMaybes, isNothing)
-import           Data.Time.Clock       (getCurrentTime)
-import           Data.Time.Clock.POSIX (getPOSIXTime)
-import           System.Exit           (ExitCode (..), die)
-import           System.Info           (os)
-import           System.IO             (BufferMode (..), hSetBuffering, stdout)
-import           System.Process        (ProcessHandle, getProcessExitCode,
-                                        spawnCommand, waitForProcess)
+import           Data.List         (intercalate)
+import           System.Exit       (ExitCode (..))
+import           System.Info       (os)
+import           System.Process    (ProcessHandle, spawnCommand, waitForProcess)
 
-import           Devbot.Core
-import           Devbot.Load           (loadDefaultConfig)
-import           Devbot.Persistence
-
-
-type State = [Task]
+import           Devbot.Bot.Common
+import           Devbot.Event
+import           Devbot.Persist
 
 
 data Task = Task
@@ -36,49 +26,17 @@ instance Eq Task where
     (==) _ _                             = False
 
 
-type ContextF = IO Context
-
-runBot :: IO ()
-runBot = do
-        putStrLn "devbot starting up"
-        hSetBuffering stdout LineBuffering
-
-        forever $ do
-            result <- loadDefaultConfig
-            case result of
-                Left err -> do
-                    logger $ "config parse error: " <> err
-                    die "cannot continue"
-
-                Right _  -> events >>= runner cxf 1 . startingState
+getTasks :: IO [Task]
+getTasks = map makeTask <$> events
     where
-        cxf = defaultContext
+        makeTask :: Event -> Task
+        makeTask e = Task e [] Nothing 0
 
 
-startingState :: [Event] -> State
-startingState = map (\ event -> Task event [] Nothing 0)
-
-
-runner :: ContextF -> Integer -> State -> IO State
--- ^ check each Task for something to do
--- run for n iterations before dropping out so main can refetch the
--- events and start us again
-runner cxf runs state =
-        if runs > minRunsToRestart && noRunners state
-          then pure []
-          else do
-              threadDelay sleepTime
-              mapM (handle cxf) state >>= runner cxf (runs + 1)
-
-    where
-        minRunsToRestart = 60 * 2      -- 60 seconds
-        sleepTime = oneSecond `div` 2  -- half a second
-        oneSecond = 1000000
-
-        noRunners :: State -> Bool
-        noRunners []                         = True
-        noRunners (Task _ [] Nothing _ : xs) = noRunners xs
-        noRunners (Task{} : _)               = False
+noRunners :: [Task] -> Bool
+noRunners []                         = True
+noRunners (Task _ [] Nothing _ : xs) = noRunners xs
+noRunners (Task{} : _)               = False
 
 
 handle :: ContextF -> Task -> IO Task
@@ -256,12 +214,6 @@ flush cxf (Event n _ d) = do
         set cx ["devbot", "data", n] d
 
 
-logger :: String -> IO ()
-logger msg = do
-        time <- getCurrentTime
-        putStrLn $ "devbot: " <> show time <> " " <> msg
-
-
 requirementsMet :: ContextF -> String -> Config -> IO Bool
 requirementsMet _   _ (Config _ _ Nothing  _ _)  = pure True
 requirementsMet cxf n (Config _ _ (Just r) _ _) = do
@@ -284,25 +236,3 @@ requirementsMet cxf n (Config _ _ (Just r) _ _) = do
 
         cmdFailed =
           "requirement " <> r <> " for " <> n <> " not met"
-
-
-getTime :: IO Integer
-getTime = round <$> getPOSIXTime
-
-
-data HandlesState =
-      StillRunning
-    | AllSuccess
-    | AnyFailure
-
-checkHandles :: [ProcessHandle] -> IO HandlesState
-checkHandles hs = do
-        codes <- mapM getProcessExitCode hs
-
-        pure $ if any isNothing codes
-            then StillRunning
-
-            -- all processes are finished, how did they finish?
-            else if all (== ExitSuccess) $ catMaybes codes
-                then AllSuccess
-                else AnyFailure

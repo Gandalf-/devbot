@@ -1,4 +1,4 @@
-module Devbot.Persistence (Context, defaultContext, get, set, keys) where
+module Devbot.Persist (Context, defaultContext, get, set, keys) where
 
 import           System.Directory      (getHomeDirectory)
 import           System.FilePath.Posix ((</>))

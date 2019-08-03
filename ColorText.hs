@@ -5,7 +5,9 @@ module ColorText (
   decorate)
 where
 
--- https://gist.github.com/nakagami8/3952274
+import           System.Info (os)
+
+-- Source: https://gist.github.com/nakagami8/3952274
 
 data Color = NoColor | Black | Red | Green | Yellow
            | Blue | Magenta | Cyan  | White
@@ -19,7 +21,9 @@ type BgColor = Color
 type Decoration = (FgColor, BgColor, Attribute)
 
 decorate :: String -> Decoration -> String
-decorate str dec = concat [escDec dec, str, esc 0]
+decorate str dec
+    | os == "mingw32" = str
+    | otherwise       = concat [escDec dec, str, esc 0]
 
 esc :: Int -> String
 esc n = concat ["\ESC[", show n, "m"]
@@ -51,17 +55,3 @@ escAttribute Underscore = esc 4
 escAttribute Blink      = esc 5
 escAttribute Reverse    = esc 7
 escAttribute Concealed  = esc 8
-
-{-
-import Data.List
-import ColorText
-
-main = let colors = [Black, Red, Green, Yellow, Blue,
-                     Magenta, Cyan, White, NoColor]
-           attributes = [Null, Bold, Underscore, Blink, Reverse, Concealed]
-           allDec = sort $ [(st, bg, at)| st <- colors,
-                                          bg <- colors,
-                                          at <- attributes]
-       in do mapM_ putStr $ map (\a -> decorate (show a) a) allDec
-             putStrLn ""
--}

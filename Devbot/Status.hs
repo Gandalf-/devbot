@@ -8,7 +8,7 @@ import           System.FilePath.Posix ((</>))
 import           System.Info           (os)
 import           System.Process        (spawnCommand, waitForProcess)
 
-import           Devbot.Persistence
+import           Devbot.Persist
 
 
 runStatus :: IO ()

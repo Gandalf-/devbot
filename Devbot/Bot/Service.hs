@@ -24,6 +24,7 @@ instance Eq Task where
 
 
 getTasks :: IO [Task]
+-- ^ read the defined services from the database, return them as Tasks
 getTasks = map makeTask <$> services
     where
         makeTask :: Service -> Task
@@ -31,8 +32,9 @@ getTasks = map makeTask <$> services
 
 
 handle :: ContextF -> Task -> IO Task
+
 handle _ (Task service (Just h) s) = do
-        -- ^ already running, see if it's still alive
+        -- ^ the service is already running, see if it's still alive
         state <- checkHandles [h]
         case state of
             StillRunning -> pure runningTask
@@ -45,21 +47,24 @@ handle _ (Task service (Just h) s) = do
 
             AnyFailure -> do
                 -- the service quit with an error
-                logger $ "service " <> _name service <> " quit with an error"
+                logger $ "service: " <> _name service <> " quit with an error"
                 pure resetTask
     where
-        runningTask  = Task service (Just h) s
-        resetTask    = Task service Nothing 0
+        runningTask = Task service (Just h) s
+        resetTask   = Task service Nothing 0
 
-handle cxf (Task s Nothing _) = do
-        -- ^ start the service, save start time
-        h <- spawnProcess process args
-        flushUptime cxf s
-        Task s (Just h) <$> getTime
+handle cxf (Task service Nothing _) = do
+        -- ^ parse arguments, start the service, save start time
+        --
+        -- services are run in directly (not in a shell),
+        -- so we use spawnProcess, not spawnCommand
+        process <- spawnProcess name args
+        flushUptime cxf service
+        Task service (Just process) <$> getTime
     where
-        process  = head elements
+        name     = head elements
         args     = safeTail elements
-        elements = words $ action $ _config s
+        elements = words $ action $ _config service
 
         safeTail [] = []
         safeTail xs = tail xs
@@ -78,9 +83,9 @@ merge func old new = do
     where
         carryOver = neededOld <> neededNew
 
-        stale      = filter (\x -> hash x `elem` staleNames) old
-        neededNew  = filter (\x -> hash x `notElem` oldNames) new
-        neededOld  = filter (\x -> hash x `elem` notStaleNames) old
+        stale     = filter (\x -> hash x `elem` staleNames) old
+        neededNew = filter (\x -> hash x `notElem` oldNames) new
+        neededOld = filter (\x -> hash x `elem` notStaleNames) old
 
         staleNames    = filter (`notElem` newNames) oldNames
         notStaleNames = filter (`elem` newNames) oldNames
@@ -93,6 +98,7 @@ merge func old new = do
 
 
 flushUptime :: ContextF -> Service -> IO ()
+-- ^ persist the start time so we can show uptime in 'devbot list'
 flushUptime cxf service = do
         cx <- cxf
         now <- getTime
@@ -100,12 +106,18 @@ flushUptime cxf service = do
 
 
 kill :: Task -> IO ()
+-- ^ kill the process, don't progress until it's dead
 kill task = case _process task of
-        Nothing  -> pure ()
-        (Just h) -> do
+        Nothing        -> pure ()
+
+        (Just process) -> do
             logger $ "terminating " <> name <> " due to config change"
-            terminateProcess h
-            void $ waitForProcess h
+            terminate process
             logger $ name <> " terminated"
     where
         name = _name (_service task)
+
+        terminate :: ProcessHandle -> IO ()
+        terminate x = do
+            terminateProcess x
+            void $ waitForProcess x

@@ -41,7 +41,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
    - git: https://github.com/Gandalf-/apocrypha-haskell/
-     commit: a6bc9fbfbb2d5cf6e0c6bd9233782bb053e5c6fa
+     commit: 66fd3be3de299ce1fd8ef4d5b4ddb2aa52ed093c
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

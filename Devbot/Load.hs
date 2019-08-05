@@ -31,15 +31,19 @@ instance ToJSON FileConfig where
 
 
 loadDefaultConfig :: IO (Either String ())
+-- ^ read, parse and persist to the database the default config
 loadDefaultConfig = defaultConfigPath >>= runLoadConfig
 
 
-defaultConfigPath :: IO FilePath
-defaultConfigPath = (</> ".devbot" </> "config.yml") <$> getHomeDirectory
-
-
 runLoadConfig :: FilePath -> IO (Either String ())
+-- ^ read, parse and persist to the database a specific config
 runLoadConfig path = decodeFileEither path >>= setConfig
+
+
+defaultConfigPath :: IO FilePath
+-- ^ produce the default config location. this should use XdgConfig ideally
+defaultConfigPath =
+        (</> ".devbot" </> "config.yml") <$> getHomeDirectory
 
 
 setConfig :: Either ParseException FileConfig -> IO (Either String ())

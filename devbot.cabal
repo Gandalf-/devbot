@@ -81,6 +81,13 @@ library
     unordered-containers,
     vector
 
+  if os(windows)
+    build-depends:
+      Win32
+  else
+    build-depends:
+      unix
+
 
 test-suite bot
   hs-source-dirs:      test

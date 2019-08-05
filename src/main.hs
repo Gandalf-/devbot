@@ -14,7 +14,7 @@ main :: IO ()
 main = do
         option <- getArgs
         case option of
-            ["start"]  -> runBot
+            ["start"]  -> savePid >> runBot
             ["list"]   -> runList
             ["status"] -> runStatus
             ["schema"] -> runSchema

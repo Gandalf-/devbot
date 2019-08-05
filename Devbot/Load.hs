@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP           #-}
 {-# LANGUAGE DeriveGeneric #-}
 
 module Devbot.Load where
@@ -10,6 +11,14 @@ import           Data.Yaml
 import           GHC.Generics
 import           System.Directory      (getHomeDirectory)
 import           System.FilePath.Posix ((</>))
+
+#ifdef mingw32_HOST_OS
+import qualified System.Win32.Process  as P
+#else
+import           System.Exit           (ExitCode (..))
+import           System.Posix.Process  as P
+import           System.Process        (spawnCommand, waitForProcess)
+#endif
 
 import           Devbot.Event          (Config, DataMap)
 import           Devbot.Persist
@@ -46,6 +55,12 @@ defaultConfigPath =
         (</> ".devbot" </> "config.yml") <$> getHomeDirectory
 
 
+defaultPidPath :: IO FilePath
+-- ^ produce the default pid location. this should use XdgConfig ideally
+defaultPidPath =
+        (</> ".devbot" </> "pid") <$> getHomeDirectory
+
+
 setConfig :: Either ParseException FileConfig -> IO (Either String ())
 setConfig (Left err) = pure $ Left $ show err
 
@@ -71,3 +86,33 @@ setConfig (Right fileConfig) = do
         set cx ["devbot", "uptime"] du
 
         pure $ Right ()
+
+
+savePid :: IO ()
+-- ^ determine the current process ID and write it out for 'devbot status'
+savePid = defaultPidPath >>= writePid
+    where
+        writePid path = getPid >>= writeFile path . show
+#ifdef mingw32_HOST_OS
+        getPid = P.c_GetCurrentProcessId
+#else
+        getPid = P.getProcessID
+#endif
+
+
+checkRunning :: IO Bool
+checkRunning = do
+        pid <- defaultPidPath >>= readFile
+
+#ifdef mingw32_HOST_OS
+        P.withTh32Snap P.tH32CS_SNAPPROCESS Nothing (\ snapHandle ->
+            not . null . filter (\ (candidate, _, _, _, _) -> show candidate == pid)
+                <$> P.th32SnapEnumProcesses snapHandle
+            )
+
+#else
+        code <- spawnCommand ("kill -0 " <> pid) >>= waitForProcess
+        pure $ case code of
+            ExitSuccess -> True
+            _           -> False
+#endif

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase     #-}
+
 module Devbot.Status
     ( runStatus
     ) where
@@ -10,12 +12,10 @@ import           Devbot.Persist
 
 
 runStatus :: IO ()
-runStatus = do
-        databaseAlive <- checkAlive
-
-        if databaseAlive
-            then checkStarted
-            else status Database
+runStatus =
+        checkAlive >>= \case
+            True  -> checkStarted
+            False -> status Database
     where
         checkAlive :: IO Bool
         checkAlive = do
@@ -24,26 +24,24 @@ runStatus = do
 
 
 checkStarted :: IO ()
-checkStarted = do
-        pExists <- L.defaultPidPath >>= doesFileExist
-
-        if pExists
-            then checkRunning
-            else status Stopped
+checkStarted =
+        L.defaultPidPath >>= doesFileExist >>= \case
+            True  -> checkRunning
+            False -> status Stopped
 
 
 checkRunning :: IO ()
-checkRunning = do
-        alive <- L.checkRunning
-        if alive
-            then status Running
-            else status StalePid
+checkRunning =
+        L.checkRunning >>= \case
+            True  -> status Running
+            False -> status StalePid
 
 
-data Status = Stopped
-            | Running
-            | StalePid
-            | Database
+data Status =
+      Stopped
+    | Running
+    | StalePid
+    | Database
 
 status :: Status -> IO ()
 status s

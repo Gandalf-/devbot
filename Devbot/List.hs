@@ -2,15 +2,17 @@ module Devbot.List
     ( runList
     ) where
 
-import           Data.List             (intercalate, sortOn)
-import           Data.Maybe            (fromMaybe)
-import           Data.Time.Clock.POSIX (getPOSIXTime)
+import           Data.List         (intercalate, sortOn)
+import           Data.Maybe        (fromMaybe)
 
-import           Devbot.Event          (Config (..), Data (..), Event (..))
-import qualified Devbot.Event          as E
+import           Devbot.Bot.Common
+import           Devbot.Parser
 
-import           Devbot.Service        (Service (..))
-import qualified Devbot.Service        as S
+import           Devbot.Event      (Config (..), Data (..), Event (..))
+import qualified Devbot.Event      as E
+
+import           Devbot.Service    (Service (..))
+import qualified Devbot.Service    as S
 
 import           ColorText
 
@@ -93,8 +95,8 @@ printOptional (Config _ _ req par one) d =
         printParallel _    = ""
 
         printOneShell :: Bool -> String
-        printOneShell True = ", " <> decorate "one-shell" magenta
-        printOneShell _    = ""
+        printOneShell False = ", " <> decorate "isolated" magenta
+        printOneShell _     = ""
 
 
 printNext :: Data -> Integer -> String
@@ -106,19 +108,24 @@ printNext (Data _ w _) time
 
 
 prettyTime :: Integer -> String
-prettyTime i
-        | i <= minute = show i <> " seconds"
-        | i <= hour   = show (div i minute) <> " minutes"
-        | i <= day    = show (div i hour) <> " hours"
-        | otherwise   = show (div i day) <> " days"
+prettyTime = pTime False
+
+pTime :: Bool -> Integer -> String
+pTime b i
+        | i == 0      = ""
+        | i < minute  = before <> showTime i "second"
+        | i < hour    = before <> showTime (div i minute) "minute" <> pTime True (mod i minute)
+        | i < day     = before <> showTime (div i hour)   "hour"   <> pTime True (mod i hour)
+        | i < week    = before <> showTime (div i day)    "day"    <> pTime True (mod i day)
+        | i < month   = before <> showTime (div i week)   "week"   <> pTime True (mod i week)
+        | i < year    = before <> showTime (div i month)  "month"  <> pTime True (mod i month)
+        | otherwise   = before <> showTime (div i year)   "year"   <> pTime True (mod i year)
     where
-        day = 86400
-        hour = 3600
-        minute = 60
+        before = if b then ", " else ""
 
-
-getTime :: IO Integer
-getTime = round <$> getPOSIXTime
+        showTime :: Integer -> String -> String
+        showTime 1 s = "1 " <> s
+        showTime x s = show x <> " " <> s <> "s"
 
 
 blue :: Decoration

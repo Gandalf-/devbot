@@ -1,4 +1,4 @@
-module Devbot.Parser (parseTime, readNumber) where
+module Devbot.Parser (parseTime, readNumber, minute, hour, day, week, month, year) where
 
 import           Text.Read (readMaybe)
 
@@ -68,6 +68,9 @@ readNumber x       = readMaybe x
 
 
 -- | Constants
+year :: Integer
+year = month * 12
+
 month :: Integer
 month = week * 4
 

@@ -90,7 +90,7 @@ instance FromJSON Config where
             do p <- o .:? "oneshell"
                case p of
                    (Just (Bool b)) -> pure b
-                   _               -> pure False
+                   _               -> pure True
              ]
 
         return Config{..}

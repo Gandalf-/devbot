@@ -1,3 +1,5 @@
+{-#LANGUAGE LambdaCase #-}
+
 module Devbot.Bot.Event where
 
 import           Data.List         (intercalate)
@@ -18,12 +20,12 @@ data Task = Task
           }
 
 instance Show Task where
-    show (Task e _ c s) =
-        intercalate ", " [show e, "<process hande>", show c, show s]
+        show (Task e _ c s) =
+            intercalate ", " [show e, "<process hande>", show c, show s]
 
 instance Eq Task where
-    (==) (Task a [] b c) (Task x [] y z) = a == x && b == y && c == z
-    (==) _ _                             = False
+        (==) (Task a [] b c) (Task x [] y z) = a == x && b == y && c == z
+        (==) _ _                             = False
 
 
 getTasks :: IO [Task]
@@ -54,26 +56,23 @@ handle cxf task@(Task (Event _ _ d) [] Nothing _) = do
         ready :: Integer -> Data -> Bool
         ready now (Data _ _when _) = now > _when
 
-handle cxf task@(Task _ hs Nothing _) = do
+handle cxf task@(Task _ hs Nothing _) =
         -- we're running, but there's nothing to do after this
-        state <- checkHandles hs
-        case state of
+        checkHandles hs >>= \case
             StillRunning -> pure task
             AllSuccess   -> success cxf task
             AnyFailure   -> failure cxf task
 
-handle cxf task@(Task _ hs (Just []) _) = do
+handle cxf task@(Task _ hs (Just []) _) =
         -- we're running, but there's nothing to do after this
-        state <- checkHandles hs
-        case state of
+        checkHandles hs >>= \case
             StillRunning -> pure task
             AllSuccess   -> success cxf task
             AnyFailure   -> failure cxf task
 
-handle cxf task@(Task event hs cmds startTime) = do
+handle cxf task@(Task event hs cmds startTime) =
         -- we're running, and there are more commands to run once these are done
-        state <- checkHandles hs
-        case state of
+        checkHandles hs >>= \case
             StillRunning -> pure task
 
             AllSuccess ->
@@ -86,13 +85,14 @@ handle cxf task@(Task event hs cmds startTime) = do
 
 
 check :: ContextF -> Task -> IO Task
-check cxf task@(Task (Event n c d) hs cs s) = do
-        -- if we can't run, wait 30 seconds before trying again
-        now <- getTime
-        met <- requirementsMet cxf n c
-        if met
-            then chooseRunner task
-            else pure $ Task (Event n c (backoff now d)) hs cs s
+check cxf task@(Task (Event n c d) hs cs s) =
+        -- ^ if we can't run, wait 30 seconds before trying again
+        requirementsMet cxf n c >>= \case
+            True  -> chooseRunner task
+
+            False -> do
+                now <- getTime
+                pure $ Task (Event n c (backoff now d)) hs cs s
     where
         chooseRunner :: (Task -> IO Task)
         chooseRunner
@@ -217,17 +217,14 @@ flush cxf (Event n _ d) = do
 requirementsMet :: ContextF -> String -> Config -> IO Bool
 requirementsMet _   _ (Config _ _ Nothing  _ _)  = pure True
 requirementsMet cxf n (Config _ _ (Just r) _ _) = do
-        cx  <- cxf
-        req <- get cx ["devbot", "requirements", r]
-
-        case req of
+        cx <- cxf
+        get cx ["devbot", "requirements", r] >>= \case
             Nothing  -> logger doesntExist >> pure False
             (Just a) -> runCheck a
     where
         runCheck :: String -> IO Bool
-        runCheck cmd = do
-            code <- spawnCommand cmd >>= waitForProcess
-            case code of
+        runCheck cmd =
+            spawnCommand cmd >>= waitForProcess >>= \case
                 ExitSuccess -> pure True
                 _           -> logger cmdFailed >> pure False
 

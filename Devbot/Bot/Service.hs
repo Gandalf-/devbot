@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Devbot.Bot.Service where
 
 import           Control.Monad     (void)
@@ -10,17 +12,17 @@ import           Devbot.Service
 
 
 data Task = Task
-    { _service :: Service
-    , _process :: Maybe ProcessHandle
-    , _start   :: Integer
-    }
+        { _service :: Service
+        , _process :: Maybe ProcessHandle
+        , _start   :: Integer
+        }
 
 instance Show Task where
-    show (Task e _ s) =
-        intercalate ", " [show e, "<process hande>", show s]
+        show (Task e _ s) =
+            intercalate ", " [show e, "<process hande>", show s]
 
 instance Eq Task where
-    (==) a b = _service a == _service b
+        (==) a b = _service a == _service b
 
 
 getTasks :: IO [Task]
@@ -33,10 +35,10 @@ getTasks = map makeTask <$> services
 
 handle :: ContextF -> Task -> IO Task
 
-handle _ (Task service (Just h) s) = do
+handle _ (Task service (Just h) s) =
         -- ^ the service is already running, see if it's still alive
-        state <- checkHandles [h]
-        case state of
+        checkHandles [h] >>= \case
+
             StillRunning -> pure runningTask
                 -- the service is still running, nothing to do
 

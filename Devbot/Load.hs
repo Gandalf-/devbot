@@ -36,7 +36,7 @@ data FileConfig = FileConfig
 instance FromJSON FileConfig where
 
 instance ToJSON FileConfig where
-    toEncoding = genericToEncoding defaultOptions
+        toEncoding = genericToEncoding defaultOptions
 
 
 loadDefaultConfig :: IO (Either String ())

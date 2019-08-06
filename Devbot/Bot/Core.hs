@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Devbot.Bot.Core where
 
 import           Control.Concurrent (threadDelay)
@@ -26,10 +28,9 @@ stateMachine :: State -> IO State
 -- ^ main loop after start up. runner iterations fall back to here for
 -- a periodic config refresh. service tasks must be checked against the
 -- new config, but otherwise left alone
-stateMachine (State _ oldServiceTasks) = do
+stateMachine (State _ oldServiceTasks) =
 
-        loaded <- loadDefaultConfig
-        case loaded of
+        loadDefaultConfig >>= \case
             Left err -> do
                 -- ^ we failed to load the config, we have to give up here
                 logger $ "config parse error: " <> err
@@ -49,23 +50,24 @@ runner :: ContextF -> Integer -> State -> IO State
 -- ^ check each Task for something to do
 -- run for n iterations before dropping out so main can refetch the
 -- events and start us again
-runner cxf runs (State ets sts) =
-        if runs > minRunsToRestart && E.noRunners ets
+runner cxf iterations (State ets sts) =
+        if iterations > minItersToRestart && E.noRunners ets
 
           -- we've hit our iteration limit and are currently idle
           then pure refreshState
 
           -- do the work!
           else do
-              threadDelay sleepTime
+                threadDelay sleepTime
 
-              handledEvents   <- mapM (E.handle cxf) ets
-              handledServices <- mapM (S.handle cxf) sts
+                handledServices <- mapM (S.handle cxf) sts
+                handledEvents   <- mapM (E.handle cxf) ets
 
-              runner cxf (runs + 1) $ State handledEvents handledServices
+                runner cxf (iterations + 1) $
+                    State handledEvents handledServices
     where
-        minRunsToRestart = 60 * 2      -- 60 seconds
-        sleepTime = oneSecond `div` 2  -- half a second
+        minItersToRestart = 60 * 2      -- 60 seconds
+        sleepTime = oneSecond `div` 2   -- half a second
         oneSecond = 1000000
 
         -- clear event tasks (none are active), but preserve service tasks

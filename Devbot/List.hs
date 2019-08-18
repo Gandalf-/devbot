@@ -107,25 +107,41 @@ printNext (Data _ w _) time
         t = prettyTime $ w - time
 
 
-prettyTime :: Integer -> String
-prettyTime = pTime False
+data Iteration = First | Second | Third
 
-pTime :: Bool -> Integer -> String
+prettyTime :: Integer -> String
+prettyTime = pTime First
+
+pTime :: Iteration -> Integer -> String
+-- ^ pretty time that does all the work. show the two highest denominations of
+-- time for the given number of seconds
+--
+-- 121  = "2 minutes, 1 second"
+-- 3661 = "1 hour, 1 minute"     -- note that seconds are omitted
+pTime Third _ = ""
 pTime b i
-        | i == 0      = ""
-        | i < minute  = before <> showTime i "second"
-        | i < hour    = before <> showTime (div i minute) "minute" <> pTime True (mod i minute)
-        | i < day     = before <> showTime (div i hour)   "hour"   <> pTime True (mod i hour)
-        | i < week    = before <> showTime (div i day)    "day"    <> pTime True (mod i day)
-        | i < month   = before <> showTime (div i week)   "week"   <> pTime True (mod i week)
-        | i < year    = before <> showTime (div i month)  "month"  <> pTime True (mod i month)
-        | otherwise   = before <> showTime (div i year)   "year"   <> pTime True (mod i year)
+        | i == 0     = ""
+        | i < minute = before <> showTime i "second"
+        | i < hour   = before <> showTime (div i minute) "minute" <> pTime (next b) (mod i minute)
+        | i < day    = before <> showTime (div i hour)   "hour"   <> pTime (next b) (mod i hour)
+        | i < week   = before <> showTime (div i day)    "day"    <> pTime (next b) (mod i day)
+        | i < month  = before <> showTime (div i week)   "week"   <> pTime (next b) (mod i week)
+        | i < year   = before <> showTime (div i month)  "month"  <> pTime (next b) (mod i month)
+        | otherwise  = before <> showTime (div i year)   "year"   <> pTime (next b) (mod i year)
     where
-        before = if b then ", " else ""
+        before :: String
+        before = case b of
+            First -> ""
+            _     -> ", "
 
         showTime :: Integer -> String -> String
         showTime 1 s = "1 " <> s
         showTime x s = show x <> " " <> s <> "s"
+
+        next :: Iteration -> Iteration
+        next First  = Second
+        next Second = Third
+        next Third  = Third
 
 
 blue :: Decoration

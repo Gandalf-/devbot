@@ -1,4 +1,4 @@
-{-#LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Devbot.Bot.Event where
 

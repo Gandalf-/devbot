@@ -1,4 +1,7 @@
-module Devbot.Parser (parseTime, readNumber, minute, hour, day, week, month, year) where
+module Devbot.Parser (
+    parseTime, readNumber,
+    minute, hour, day, week, month, year
+) where
 
 import           Text.Read (readMaybe)
 

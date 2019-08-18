@@ -34,9 +34,6 @@ instance ToJSON ServiceConfig where
 type ServiceConfigMap = HM.HashMap String ServiceConfig
 -- ^ config data
 
-type UptimeMap = HM.HashMap String Integer
--- ^ runtime data
-
 
 services :: IO [Service]
 services = do

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Main where
 
 import           System.Environment (getArgs)
@@ -14,10 +16,15 @@ main :: IO ()
 main = do
         option <- getArgs
         case option of
-            ["start"]  -> savePid >> runBot
+            ["start"] -> getStatus >>= \case
+                Running -> die "devbot appears to already be running"
+                _       -> savePid >> runBot
+
             ["list"]   -> runList
             ["status"] -> runStatus
             ["schema"] -> runSchema
+
+            ["find-config"] -> defaultConfigPath >>= putStrLn
 
             -- help text
             _          -> defaultConfigPath >>= die . usage
@@ -32,5 +39,5 @@ usage path = unlines
     , "  status      - give a single character summary of run state"
     , ""
     , "  schema      - show the config file schema"
-    , "  load        - load the config file: " <> path
+    , "  find-config - print the config path: " <> path
     ]

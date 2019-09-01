@@ -80,13 +80,14 @@ saveDevbotPid :: IO ()
 -- ^ determine the current process ID and write it out for 'devbot status'
 saveDevbotPid = do
         c <- defaultContext
-        retrievePid >>= set c ["devbot", "pid"]
-    where
-        retrievePid :: IO String
+        retrieveMyPid >>= set c ["devbot", "pid"]
+
+
+retrieveMyPid :: IO Pid
 #ifdef mingw32_HOST_OS
-        retrievePid = show <$> P.c_GetCurrentProcessId
+retrieveMyPid = P.c_GetCurrentProcessId
 #else
-        retrievePid = show <$> P.getProcessID
+retrieveMyPid = P.getProcessID
 #endif
 
 
@@ -95,21 +96,22 @@ checkDevbotRunning :: IO Bool
 checkDevbotRunning = do
         c <- defaultContext
         get c ["devbot", "pid"] >>= \case
-            Nothing  -> pure False
-            (Just p) -> checkPid p
+            (Just pid) -> checkPid pid
+            Nothing    -> pure False
 
-checkPid :: String -> IO Bool
+
+checkPid :: Pid -> IO Bool
 #ifdef mingw32_HOST_OS
 checkPid pid =
         P.withTh32Snap P.tH32CS_SNAPPROCESS Nothing (\ snapHandle ->
-        not . null . filter (\ (candidate, _, _, _, _) -> show candidate == pid)
-                <$> P.th32SnapEnumProcesses snapHandle
+        not . null . filter (\ (candidate, _, _, _, _) -> candidate == pid)
+            <$> P.th32SnapEnumProcesses snapHandle
         )
 #else
 checkPid pid =
-        spawnCommand ("kill -0 " <> pid) >>= waitForProcess >>= \case
-        ExitSuccess -> True
-        _           -> False
+        spawnCommand ("kill -0 " <> show pid) >>= waitForProcess >>= \case
+            ExitSuccess -> True
+            _           -> False
 #endif
 
 terminatePid :: Pid -> IO ()

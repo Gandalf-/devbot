@@ -38,7 +38,7 @@ handle :: ContextF -> Task -> IO Task
 
 handle _ (Task service (Just (Right p)) s) =
         -- ^ the service is already running with a pid, see if it's still alive
-        checkPid (show p) >>= \case
+        checkPid p >>= \case
             True  -> pure runningTask
                 -- the service is still running, nothing to do
 
@@ -77,7 +77,7 @@ handle cxf (Task service Nothing _) =
         recoverService cxf (_name service) >>= \case
             (Just (pid, uptime)) -> do
                 -- ^ already running, and we can recover all the state
-                logger $ "service: " <> _name service <> " state recovered from database"
+                logger $ "service: " <> _name service <> " state recovered"
                 pure $ Task service (Just . Right $ pid) uptime
 
             Nothing -> do
@@ -105,13 +105,20 @@ handle cxf (Task service Nothing _) =
 recoverService :: ContextF -> String -> IO (Maybe (Pid, Integer))
 -- ^ attempt to extract the last known pid and uptime for the given service
 recoverService cxf name = do
-    cx <- cxf
+        cx <- cxf
 
-    uptime <- get cx ["devbot", "uptime", name]
-    rawPid <- get cx ["devbot", "pids",   name]
-    let pid = read <$> rawPid :: Maybe Pid
+        uptime <- get cx ["devbot", "uptime", name]
+        rawPid <- get cx ["devbot", "pids",   name]
+        pid <- alivePid (read <$> rawPid :: Maybe Pid)
 
-    pure $ (,) <$> pid <*> uptime
+        pure $ (,) <$> pid <*> uptime
+    where
+        alivePid :: Maybe Pid -> IO (Maybe Pid)
+        alivePid Nothing  = pure Nothing
+        alivePid pid@(Just p) =
+            checkPid p >>= \case
+                True  -> pure pid
+                False -> pure Nothing
 
 
 merge :: (Task -> IO ()) -> [Task] -> [Task] -> IO [Task]
@@ -154,7 +161,7 @@ flushPid cxf service process =
         getPid process >>= \case
             (Just pid) -> do
                 cx <- cxf
-                set cx ["devbot", "pids", name] $ show pid
+                set cx ["devbot", "pids", name] pid
 
             Nothing   -> logger $ "service " <> name <> " exited before pid flush"
     where

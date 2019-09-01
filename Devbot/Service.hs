@@ -21,7 +21,7 @@ data Service = Service
 data ServiceConfig = ServiceConfig
     -- ^ this comes directly from our config file
         { action :: String
-        , log    :: String
+        , log    :: Maybe String
         }
     deriving (Show, Eq, Generic)
 

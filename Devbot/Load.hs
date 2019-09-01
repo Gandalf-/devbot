@@ -12,6 +12,7 @@ import           Data.Yaml
 import           GHC.Generics
 import           System.Directory      (getHomeDirectory)
 import           System.FilePath.Posix ((</>))
+import           System.Process
 
 #ifdef mingw32_HOST_OS
 import qualified System.Win32.Process  as P
@@ -19,7 +20,6 @@ import qualified System.Win32.Process  as P
 #else
 import           System.Exit           (ExitCode (..))
 import           System.Posix.Process  as P
-import           System.Process        (spawnCommand, waitForProcess)
 #endif
 
 import           Devbot.Event          (Config, DataMap)
@@ -76,38 +76,46 @@ setConfig (Right fileConfig) = do
         eventNames = HM.keys $ events fileConfig
 
 
-savePid :: IO ()
+saveDevbotPid :: IO ()
 -- ^ determine the current process ID and write it out for 'devbot status'
-savePid = do
+saveDevbotPid = do
         c <- defaultContext
-        getPid >>= set c ["devbot", "pid"]
+        retrievePid >>= set c ["devbot", "pid"]
     where
-        getPid :: IO String
+        retrievePid :: IO String
 #ifdef mingw32_HOST_OS
-        getPid = show <$> P.c_GetCurrentProcessId
+        retrievePid = show <$> P.c_GetCurrentProcessId
 #else
-        getPid = show <$> P.getProcessID
+        retrievePid = show <$> P.getProcessID
 #endif
 
 
-checkRunning :: IO Bool
+checkDevbotRunning :: IO Bool
 -- ^ retrive our last pid from the database and see if it's active
-checkRunning = do
+checkDevbotRunning = do
         c <- defaultContext
         get c ["devbot", "pid"] >>= \case
             Nothing  -> pure False
             (Just p) -> checkPid p
-    where
-        checkPid :: String -> IO Bool
+
+checkPid :: String -> IO Bool
 #ifdef mingw32_HOST_OS
-        checkPid pid =
-             P.withTh32Snap P.tH32CS_SNAPPROCESS Nothing (\ snapHandle ->
-             not . null . filter (\ (candidate, _, _, _, _) -> show candidate == pid)
-                     <$> P.th32SnapEnumProcesses snapHandle
-             )
+checkPid pid =
+        P.withTh32Snap P.tH32CS_SNAPPROCESS Nothing (\ snapHandle ->
+        not . null . filter (\ (candidate, _, _, _, _) -> show candidate == pid)
+                <$> P.th32SnapEnumProcesses snapHandle
+        )
 #else
-        checkPid pid =
-            spawnCommand ("kill -0 " <> pid) >>= waitForProcess >>= \case
-                ExitSuccess -> True
-                _           -> False
+checkPid pid =
+        spawnCommand ("kill -0 " <> pid) >>= waitForProcess >>= \case
+        ExitSuccess -> True
+        _           -> False
+#endif
+
+terminatePid :: Pid -> IO ()
+-- ^ kill a process by system PID
+#ifdef mingw32_HOST_OS
+terminatePid = P.terminateProcessById
+#else
+terminatePid pid = callCommand ("kill " <> show pid)
 #endif

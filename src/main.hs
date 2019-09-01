@@ -10,34 +10,53 @@ import           Devbot.List
 import           Devbot.Load
 import           Devbot.Schema
 import           Devbot.Status
+import           Devbot.Daemon
 
 
 main :: IO ()
 main = do
         option <- getArgs
         case option of
-            ["start"] -> getStatus >>= \case
-                Running -> die "devbot appears to already be running"
-                _       -> savePid >> runBot
+            ["start"]  -> ifRunningElse
+                (exit "running")
+                (saveDevbotPid >> runBot)
+
+            ["daemon"] -> ifRunningElse
+                (exit "running")
+                runDaemon
+
+            ["stop"]   -> ifRunningElse
+                stopDaemon
+                (exit "stopped")
 
             ["list"]   -> runList
             ["status"] -> runStatus
             ["schema"] -> runSchema
 
-            ["find-config"] -> defaultConfigPath >>= putStrLn
+            ["config"] -> defaultConfigPath >>= putStrLn
 
             -- help text
-            _          -> defaultConfigPath >>= die . usage
+            _          -> die usage
+    where
+        exit :: String -> IO ()
+        exit x = die $ "devbot appears to already be " <> x
+
+        ifRunningElse :: IO b -> IO b -> IO b
+        ifRunningElse a b = getStatus >>= \case
+            Running -> a
+            _       -> b
 
 
-usage :: FilePath -> String
-usage path = unlines
+usage :: String
+usage = unlines
     [ "devbot usage: "
     , "  start       - start the devbot daemon"
+    , "  daemon      - start the devbot daemon in the background"
+    , "  stop        - stop the devbot daemon"
     , ""
     , "  list        - show a summary of runtime data and config"
     , "  status      - give a single character summary of run state"
     , ""
     , "  schema      - show the config file schema"
-    , "  find-config - print the config path: " <> path
+    , "  config      - show the config file path"
     ]

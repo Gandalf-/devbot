@@ -62,6 +62,7 @@ library
     Devbot.Load
     Devbot.Status
     Devbot.Schema
+    Devbot.Daemon
     Devbot.Parser
     Devbot.Persist
 

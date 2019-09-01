@@ -30,6 +30,8 @@ parse ["days"]    = Just day
 parse ["weeks"]   = Just week
 parse ["months"]  = Just month
 
+parse ("twice":"per":x) = flip div 2 <$> parse x
+
 parse ("twice":x) = flip div 2 <$> parse x
 
 parse ("every":"other":y) = (* 2) <$> parse y

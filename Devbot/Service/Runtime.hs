@@ -1,15 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Devbot.Bot.Service where
+module Devbot.Service.Runtime where
 
-import           Control.Monad     (void)
-import           Data.List         (intercalate)
+import           Control.Monad           (void)
+import           Data.List               (intercalate)
 import           System.Process
 
-import           Devbot.Bot.Common
-import           Devbot.Load       (terminatePid, checkPid)
-import           Devbot.Persist
-import           Devbot.Service
+import           Devbot.Internal.Common
+import           Devbot.Internal.Persist
+import           Devbot.Internal.System  (checkPid, terminatePid)
+import           Devbot.Service.Config
 
 
 data Task = Task
@@ -114,11 +114,12 @@ recoverService cxf name = do
         pure $ (,) <$> pid <*> uptime
     where
         alivePid :: Maybe Pid -> IO (Maybe Pid)
-        alivePid Nothing  = pure Nothing
+        -- ^ check if the maybe pid is alive, if it exists and is alive, keep it
         alivePid pid@(Just p) =
             checkPid p >>= \case
                 True  -> pure pid
                 False -> pure Nothing
+        alivePid Nothing  = pure Nothing
 
 
 merge :: (Task -> IO ()) -> [Task] -> [Task] -> IO [Task]

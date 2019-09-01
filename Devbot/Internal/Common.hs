@@ -1,4 +1,4 @@
-module Devbot.Bot.Common where
+module Devbot.Internal.Common where
 
 import           Data.Maybe            (catMaybes, isNothing)
 import           Data.Time.Clock       (getCurrentTime)
@@ -6,7 +6,7 @@ import           Data.Time.Clock.POSIX (getPOSIXTime)
 import           System.Exit           (ExitCode (..))
 import           System.Process        (ProcessHandle, getProcessExitCode)
 
-import           Devbot.Persist
+import           Devbot.Internal.Persist
 
 
 type ContextF = IO Context

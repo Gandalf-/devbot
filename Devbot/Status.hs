@@ -4,9 +4,9 @@ module Devbot.Status
     ( runStatus, getStatus, Status(..)
     ) where
 
-import           System.Info (os)
+import           System.Info            (os)
 
-import qualified Devbot.Load as L
+import           Devbot.Internal.System (checkDevbotRunning)
 
 
 data Status
@@ -21,7 +21,7 @@ runStatus = getStatus >>= printStatus
 
 getStatus :: IO Status
 getStatus =
-        L.checkDevbotRunning >>= \case
+        checkDevbotRunning >>= \case
             True  -> pure Running
             False -> pure Stopped
 

@@ -2,14 +2,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Devbot.Service where
+module Devbot.Service.Config where
 
 import           Data.Aeson
-import qualified Data.HashMap.Strict as HM
-import           Data.Maybe          (fromMaybe)
+import qualified Data.HashMap.Strict     as HM
+import           Data.Maybe              (fromMaybe)
 import           GHC.Generics
 
-import           Devbot.Persist
+import           Devbot.Internal.Persist
 
 data Service = Service
         { _name   :: String

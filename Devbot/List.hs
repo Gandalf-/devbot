@@ -1,18 +1,19 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Devbot.List
     ( runList
     ) where
 
-import           Data.List         (intercalate, sortOn)
-import           Data.Maybe        (fromMaybe)
+import           Data.List             (intercalate, sortOn)
 
-import           Devbot.Bot.Common
-import           Devbot.Parser
+import           Devbot.Internal.Common
+import           Devbot.Internal.Parser
 
-import           Devbot.Event      (Config (..), Data (..), Event (..))
-import qualified Devbot.Event      as E
+import           Devbot.Event.Config   (Config (..), Data (..), Event (..))
+import qualified Devbot.Event.Config   as E
 
-import           Devbot.Service    (Service (..))
-import qualified Devbot.Service    as S
+import           Devbot.Service.Config (Service (..))
+import qualified Devbot.Service.Config as S
 
 import           ColorText
 
@@ -26,14 +27,15 @@ runList = do
 printService :: Service -> IO ()
 -- ^ show name, action, and uptime
 printService (Service n c) = do
-        uptime <- S.getUptime n
         now <- getTime
-        let seconds = (\x -> prettyTime $ now - x) <$> uptime
+        status <- S.getUptime n >>= \case
+                (Just time) -> pure $ "uptime " <> prettyTime (now - time)
+                Nothing     -> pure "not running"
 
         putStrLn $ concat
             [ "service: ", printName n
             , pad, decorate (S.action c) blue
-            , pad, decorate ("uptime " <> fromMaybe "not running" seconds) cyan, "\n"
+            , pad, decorate status cyan, "\n"
             ]
     where
         pad     = "\n    "

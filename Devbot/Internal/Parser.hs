@@ -1,4 +1,4 @@
-module Devbot.Parser (
+module Devbot.Internal.Parser (
     parseTime, readNumber,
     minute, hour, day, week, month, year
 ) where

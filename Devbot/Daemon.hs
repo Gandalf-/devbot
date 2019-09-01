@@ -2,13 +2,13 @@
 
 module Devbot.Daemon where
 
-import           Control.Monad  (void)
-import           Data.Maybe     (catMaybes)
+import           Control.Monad           (void)
+import           Data.Maybe              (catMaybes)
+import           System.Info             (os)
+import           System.Process          (Pid, spawnCommand)
 
-import           Devbot.Load
-import           Devbot.Persist
-import           System.Info    (os)
-import           System.Process (Pid, spawnCommand)
+import           Devbot.Internal.Persist
+import           Devbot.Internal.System
 
 runDaemon :: IO ()
 runDaemon =

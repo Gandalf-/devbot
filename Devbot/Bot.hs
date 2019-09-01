@@ -1,16 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Devbot.Bot.Core where
+module Devbot.Bot where
 
-import           Control.Concurrent (threadDelay)
-import           Control.Monad      (void)
-import           System.IO          (BufferMode (..), hSetBuffering, stdout)
+import           Control.Concurrent      (threadDelay)
+import           Control.Monad           (void)
+import           System.IO               (BufferMode (..), hSetBuffering,
+                                          stdout)
 
-import           Devbot.Bot.Common
-import qualified Devbot.Bot.Event   as E
-import qualified Devbot.Bot.Service as S
-import           Devbot.Load        (loadDefaultConfig)
-import           Devbot.Persist
+import qualified Devbot.Event.Runtime    as E
+import           Devbot.Internal.Common
+import           Devbot.Internal.Persist
+import           Devbot.Internal.System  (loadDefaultConfig)
+import qualified Devbot.Service.Runtime  as S
 
 
 data State = State [E.Task] [S.Task]

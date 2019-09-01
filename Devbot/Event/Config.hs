@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module Devbot.Event where
+module Devbot.Event.Config where
 
 import           Data.Aeson
 import           Data.Foldable       (asum)
@@ -12,8 +12,8 @@ import           Data.Maybe          (fromMaybe)
 import qualified Data.Text           as T
 import           GHC.Generics
 
-import           Devbot.Parser
-import           Devbot.Persist
+import           Devbot.Internal.Parser
+import           Devbot.Internal.Persist
 
 
 -- | Event

@@ -1,15 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Devbot.Bot.Event where
+module Devbot.Event.Runtime where
 
-import           Data.List         (intercalate)
-import           System.Exit       (ExitCode (..))
-import           System.Info       (os)
-import           System.Process    (ProcessHandle, spawnCommand, waitForProcess)
+import           Data.List               (intercalate)
+import           System.Exit             (ExitCode (..))
+import           System.Info             (os)
+import           System.Process          (ProcessHandle, spawnCommand,
+                                          waitForProcess)
 
-import           Devbot.Bot.Common
-import           Devbot.Event
-import           Devbot.Persist
+import           Devbot.Internal.Common
+import           Devbot.Event.Config
+import           Devbot.Internal.Persist
 
 
 data Task = Task

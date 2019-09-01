@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase    #-}
 
-module Devbot.Load where
+module Devbot.Internal.System where
 
 import           Data.Aeson            (defaultOptions, genericToEncoding)
 import qualified Data.HashMap.Strict   as HM
@@ -22,9 +22,9 @@ import           System.Exit           (ExitCode (..))
 import           System.Posix.Process  as P
 #endif
 
-import           Devbot.Event          (Config, DataMap)
-import           Devbot.Persist
-import           Devbot.Service        (ServiceConfig)
+import           Devbot.Event.Config   (Config, DataMap)
+import           Devbot.Internal.Persist
+import           Devbot.Service.Config (ServiceConfig)
 
 
 data FileConfig = FileConfig

@@ -50,21 +50,22 @@ library
     ghc-options: -O0
 
   exposed-modules:
-    Devbot.Event
-    Devbot.Service
+    Devbot.Event.Config
+    Devbot.Event.Runtime
 
-    Devbot.Bot.Core
-    Devbot.Bot.Event
-    Devbot.Bot.Service
-    Devbot.Bot.Common
+    Devbot.Service.Config
+    Devbot.Service.Runtime
 
+    Devbot.Internal.Common
+    Devbot.Internal.Parser
+    Devbot.Internal.System
+    Devbot.Internal.Persist
+
+    Devbot.Bot
+    Devbot.Daemon
     Devbot.List
-    Devbot.Load
     Devbot.Status
     Devbot.Schema
-    Devbot.Daemon
-    Devbot.Parser
-    Devbot.Persist
 
     ColorText
 

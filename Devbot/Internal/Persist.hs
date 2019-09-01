@@ -1,4 +1,4 @@
-module Devbot.Persist (
+module Devbot.Internal.Persist (
     Context, defaultContext, get, set, keys, del
 ) where
 

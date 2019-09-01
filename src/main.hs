@@ -2,15 +2,16 @@
 
 module Main where
 
-import           System.Environment (getArgs)
-import           System.Exit        (die)
+import           System.Environment     (getArgs)
+import           System.Exit            (die)
 
-import           Devbot.Bot.Core
+import           Devbot.Bot
+import           Devbot.Daemon
 import           Devbot.List
-import           Devbot.Load
 import           Devbot.Schema
 import           Devbot.Status
-import           Devbot.Daemon
+
+import           Devbot.Internal.System
 
 
 main :: IO ()

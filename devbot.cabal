@@ -57,6 +57,7 @@ library
     Devbot.Service.Runtime
 
     Devbot.Internal.Common
+    Devbot.Internal.Directory
     Devbot.Internal.Parser
     Devbot.Internal.System
     Devbot.Internal.Persist
@@ -77,6 +78,7 @@ library
     apocrypha,
     directory,
     filepath,
+    scientific,
     process,
     text,
     time,

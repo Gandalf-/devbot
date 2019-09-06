@@ -19,11 +19,11 @@ data Task = Task
         }
 
 instance Show Task where
-        show (Task e _ s) =
-            intercalate ", " [show e, "<process hande>", show s]
+    show (Task e _ s) =
+        intercalate ", " [show e, "<process hande>", show s]
 
 instance Eq Task where
-        (==) a b = _service a == _service b
+    (==) a b = _service a == _service b
 
 
 getTasks :: IO [Task]
@@ -172,7 +172,7 @@ flushPid cxf service process =
 kill :: Task -> IO ()
 -- ^ kill the process, don't progress until it's dead
 kill task = case _process task of
-        Nothing        -> pure ()
+        Nothing -> pure ()
 
         (Just something) -> do
             logger $ "terminating " <> name <> " due to config change"

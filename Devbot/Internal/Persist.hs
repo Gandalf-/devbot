@@ -2,14 +2,12 @@ module Devbot.Internal.Persist (
     Context, defaultContext, get, set, keys, del
 ) where
 
-import           System.Directory      (getHomeDirectory)
-import           System.FilePath.Posix ((</>))
-
-import           Apocrypha.Client      hiding (defaultContext)
+import           Apocrypha.Client          hiding (defaultContext)
+import           Devbot.Internal.Directory
 
 
 defaultContext :: IO Context
 -- ^ provide our own default context
 defaultContext = do
-    path <- (</> ".devbot" </> "db.json") <$> getHomeDirectory
+    path <- getDatabasePath
     getServerlessContext path

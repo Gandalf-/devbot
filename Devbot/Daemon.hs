@@ -11,6 +11,7 @@ import           Devbot.Internal.Persist
 import           Devbot.Internal.System
 
 runDaemon :: IO ()
+-- ^ start devbot in the background in a platform specific way
 runDaemon =
         void $ spawnCommand $ case os of
             "mingw32" -> windows
@@ -22,6 +23,8 @@ runDaemon =
             "powershell.exe -WindowStyle hidden {devbot start}"
 
 stopDaemon :: IO ()
+-- ^ stop devbot and all services, then clear service state so devbot list shows that
+-- they're not running
 stopDaemon = do
         cx <- defaultContext
 

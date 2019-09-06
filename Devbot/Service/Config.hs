@@ -17,6 +17,9 @@ data Service = Service
         }
     deriving (Show, Eq)
 
+instance Ord Service where
+    compare a b = compare (_name a) (_name b)
+
 
 data ServiceConfig = ServiceConfig
     -- ^ this comes directly from our config file

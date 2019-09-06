@@ -4,54 +4,59 @@ module Devbot.List
     ( runList
     ) where
 
-import           Data.List             (intercalate, sortOn)
+import           Data.List              (intercalate, sort)
 
 import           Devbot.Internal.Common
 import           Devbot.Internal.Parser
 
-import           Devbot.Event.Config   (Config (..), Data (..), Event (..))
-import qualified Devbot.Event.Config   as E
+import           Devbot.Event.Config    (Config (..), Data (..), Event (..))
+import qualified Devbot.Event.Config    as E
 
-import           Devbot.Service.Config (Service (..))
-import qualified Devbot.Service.Config as S
+import           Devbot.Service.Config  (Service (..))
+import qualified Devbot.Service.Config  as S
 
 import           ColorText
 
 
 runList :: IO ()
 runList = do
-        sortOn E._name <$> E.events   >>= mapM_ printEvent
-        sortOn S._name <$> S.services >>= mapM_ printService
-
-
-printService :: Service -> IO ()
--- ^ show name, action, and uptime
-printService (Service n c) = do
-        now <- getTime
-        status <- S.getUptime n >>= \case
-                (Just time) -> pure $ "uptime " <> prettyTime (now - time)
-                Nothing     -> pure "not running"
-
-        putStrLn $ concat
-            [ "service: ", printName n
-            , pad, decorate (S.action c) blue
-            , pad, decorate status cyan, "\n"
-            ]
+        E.events   >>= sortDisplay
+        S.services >>= sortDisplay
     where
-        pad     = "\n    "
+        sortDisplay :: (Displayable a, Ord a) => [a] -> IO ()
+        sortDisplay s = mapM_ display $ sort s
 
 
-printEvent :: Event -> IO ()
-printEvent (Event n c d) = do
-        now <- getTime
-        putStrLn $ concat
-            [ printName n, "\n"
-            , printAction c, "\n"
-            , printInterval c
-            , printOptional c d, ", "
-            , printNext d now
-            , "\n"
-            ]
+class Displayable a where
+    display :: a -> IO ()
+
+instance Displayable Service where
+    -- ^ show name, action, and uptime
+    display (Service n c) = do
+            now <- getTime
+            status <- S.getUptime n >>= \case
+               (Just time) -> pure $ "uptime " <> prettyTime (now - time)
+               Nothing     -> pure "not running"
+
+            putStrLn $ concat
+               [ "service: ", printName n
+               , pad, decorate (S.action c) blue
+               , pad, decorate status cyan, "\n"
+               ]
+         where
+            pad = "\n    "
+
+instance Displayable Event where
+    display (Event n c d) = do
+            now <- getTime
+            putStrLn $ concat
+                [ printName n, "\n"
+                , printAction c, "\n"
+                , printInterval c
+                , printOptional c d, ", "
+                , printNext d now
+                , "\n"
+                ]
 
 
 printName :: String -> String

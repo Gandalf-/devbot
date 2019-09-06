@@ -6,10 +6,10 @@
 module Devbot.Event.Config where
 
 import           Data.Aeson
-import           Data.Foldable       (asum)
-import qualified Data.HashMap.Strict as HM
-import           Data.Maybe          (fromMaybe)
-import qualified Data.Text           as T
+import           Data.Foldable           (asum)
+import qualified Data.HashMap.Strict     as HM
+import           Data.Maybe              (fromMaybe)
+import qualified Data.Text               as T
 import           GHC.Generics
 
 import           Devbot.Internal.Parser
@@ -24,6 +24,9 @@ data Event = Event
        , _data   :: !Data
        }
     deriving (Show, Eq)
+
+instance Ord Event where
+        compare a b = compare (_name a) (_name b)
 
 
 -- | Data

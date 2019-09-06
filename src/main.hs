@@ -2,8 +2,8 @@
 
 module Main where
 
-import           System.Environment     (getArgs)
-import           System.Exit            (die)
+import           System.Environment        (getArgs)
+import           System.Exit               (die)
 
 import           Devbot.Bot
 import           Devbot.Daemon
@@ -11,13 +11,15 @@ import           Devbot.List
 import           Devbot.Schema
 import           Devbot.Status
 
+import           Devbot.Internal.Directory
 import           Devbot.Internal.System
 
 
 main :: IO ()
 main = do
-        option <- getArgs
-        case option of
+        ensureDefaultDirectory
+
+        getArgs >>= \case
             ["start"]  -> ifRunningElse
                 (exit "running")
                 (saveDevbotPid >> runBot)
@@ -34,7 +36,7 @@ main = do
             ["status"] -> runStatus
             ["schema"] -> runSchema
 
-            ["config"] -> defaultConfigPath >>= putStrLn
+            ["config"] -> getConfigPath >>= putStrLn
 
             -- help text
             _          -> die usage
@@ -51,9 +53,9 @@ main = do
 usage :: String
 usage = unlines
     [ "devbot usage: "
-    , "  start       - start the devbot daemon"
-    , "  daemon      - start the devbot daemon in the background"
-    , "  stop        - stop the devbot daemon"
+    , "  start       - start devbot"
+    , "  daemon      - start devbot in the background"
+    , "  stop        - stop devbot and all services"
     , ""
     , "  list        - show a summary of runtime data and config"
     , "  status      - give a single character summary of run state"

@@ -22,7 +22,9 @@ runBot :: IO ()
 runBot = do
         putStrLn "devbot starting up"
         hSetBuffering stdout LineBuffering
-        void . stateMachine $ State [] []
+        void $ stateMachine startingState
+    where
+        startingState = State [] []
 
 
 stateMachine :: State -> IO State

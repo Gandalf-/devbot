@@ -1,10 +1,10 @@
 module Devbot.Internal.Common where
 
-import           Data.Maybe            (catMaybes, isNothing)
-import           Data.Time.Clock       (getCurrentTime)
-import           Data.Time.Clock.POSIX (getPOSIXTime)
-import           System.Exit           (ExitCode (..))
-import           System.Process        (ProcessHandle, getProcessExitCode)
+import           Data.Maybe              (catMaybes, isNothing)
+import           Data.Time.Clock         (getCurrentTime)
+import           Data.Time.Clock.POSIX   (getPOSIXTime)
+import           System.Exit             (ExitCode (..))
+import           System.Process          (ProcessHandle, getProcessExitCode)
 
 import           Devbot.Internal.Persist
 

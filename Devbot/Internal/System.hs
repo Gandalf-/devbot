@@ -2,29 +2,33 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase    #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Devbot.Internal.System where
 
-import           Data.Aeson            (defaultOptions, genericToEncoding)
-import qualified Data.HashMap.Strict   as HM
-import           Data.Text             (Text)
-import qualified Data.Text             as T
+import           Control.Monad             (void)
+import           Data.Aeson                (defaultOptions, genericToEncoding)
+import qualified Data.HashMap.Strict       as HM
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 import           Data.Yaml
 import           GHC.Generics
-import           System.Directory      (getHomeDirectory)
-import           System.FilePath.Posix ((</>))
 import           System.Process
 
 #ifdef mingw32_HOST_OS
-import qualified System.Win32.Process  as P
+import qualified System.Win32.Process      as P
 
 #else
-import           System.Exit           (ExitCode (..))
-import           System.Posix.Process  as P
+import qualified Data.Scientific           as S
+import           System.Exit               (ExitCode (..))
+import           System.Posix.Process      as P
+import           System.Posix.Types        (CPid)
 #endif
 
-import           Devbot.Event.Config   (Config, DataMap)
+import           Devbot.Event.Config       (Config, DataMap)
+import           Devbot.Internal.Directory
 import           Devbot.Internal.Persist
-import           Devbot.Service.Config (ServiceConfig)
+import           Devbot.Service.Config     (ServiceConfig)
 
 
 data FileConfig = FileConfig
@@ -41,16 +45,23 @@ instance ToJSON FileConfig where
         toEncoding = genericToEncoding defaultOptions
 
 
+#ifndef mingw32_HOST_OS
+-- | we need JSON instances for CPid on Linux
+
+instance ToJSON CPid where
+    toJSON pid = Number $ S.scientific (toInteger pid) 0
+
+instance FromJSON CPid where
+    parseJSON = withScientific "CPid" $ \o -> maybe
+            (fail $ "value is not a number!" ++ show o)
+            pure
+            (S.toBoundedInteger o)
+#endif
+
+
 loadDefaultConfig :: IO (Either String ())
 -- ^ read, parse and persist to the database the default config
-loadDefaultConfig =
-        defaultConfigPath >>= decodeFileEither >>= setConfig
-
-
-defaultConfigPath :: IO FilePath
--- ^ produce the default config location. this should use XdgConfig ideally
-defaultConfigPath =
-        (</> ".devbot" </> "config.yml") <$> getHomeDirectory
+loadDefaultConfig = getConfigPath >>= decodeFileEither >>= setConfig
 
 
 setConfig :: Either ParseException FileConfig -> IO (Either String ())
@@ -77,17 +88,18 @@ setConfig (Right fileConfig) = do
 
 
 saveDevbotPid :: IO ()
--- ^ determine the current process ID and write it out for 'devbot status'
+-- ^ determine the current process ID and write it out for 'devbot status' to read later
+-- on from a different process
 saveDevbotPid = do
         c <- defaultContext
-        retrieveMyPid >>= set c ["devbot", "pid"]
+        getMyPid >>= set c ["devbot", "pid"]
 
 
-retrieveMyPid :: IO Pid
+getMyPid :: IO Pid
 #ifdef mingw32_HOST_OS
-retrieveMyPid = P.c_GetCurrentProcessId
+getMyPid = P.c_GetCurrentProcessId
 #else
-retrieveMyPid = P.getProcessID
+getMyPid = P.getProcessID
 #endif
 
 
@@ -109,9 +121,10 @@ checkPid pid =
         )
 #else
 checkPid pid =
-        spawnCommand ("kill -0 " <> show pid) >>= waitForProcess >>= \case
-            ExitSuccess -> True
-            _           -> False
+        spawnCommand ("kill -0 " <> show pid <> " 2>/dev/null")
+            >>= waitForProcess >>= \case
+                ExitSuccess -> pure True
+                _           -> pure False
 #endif
 
 terminatePid :: Pid -> IO ()
@@ -119,5 +132,8 @@ terminatePid :: Pid -> IO ()
 #ifdef mingw32_HOST_OS
 terminatePid = P.terminateProcessById
 #else
-terminatePid pid = callCommand ("kill " <> show pid)
+terminatePid pid =
+        checkPid pid >>= \case
+            True  -> spawnCommand ("kill " <> show pid) >>= void . waitForProcess
+            False -> pure ()
 #endif

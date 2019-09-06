@@ -8,25 +8,25 @@ import           System.Info             (os)
 import           System.Process          (ProcessHandle, spawnCommand,
                                           waitForProcess)
 
-import           Devbot.Internal.Common
 import           Devbot.Event.Config
+import           Devbot.Internal.Common
 import           Devbot.Internal.Persist
 
 
 data Task = Task
-          { _event   :: Event
-          , _process :: [ProcessHandle]
-          , _cmds    :: Maybe [String]
-          , _start   :: Integer
-          }
+        { _event   :: Event
+        , _process :: [ProcessHandle]
+        , _cmds    :: Maybe [String]
+        , _start   :: Integer
+        }
 
 instance Show Task where
-        show (Task e _ c s) =
-            intercalate ", " [show e, "<process hande>", show c, show s]
+    show (Task e _ c s) =
+        intercalate ", " [show e, "<process hande>", show c, show s]
 
 instance Eq Task where
-        (==) (Task a [] b c) (Task x [] y z) = a == x && b == y && c == z
-        (==) _ _                             = False
+    (==) (Task a [] b c) (Task x [] y z) = a == x && b == y && c == z
+    (==) _ _                             = False
 
 
 getTasks :: IO [Task]
@@ -107,10 +107,11 @@ check cxf task@(Task (Event n c d) hs cs s) =
 runParallel :: Task -> IO Task
 -- ^ start all actions immediately, there is no follow on work after this
 runParallel task = do
-        hs <- mapM spawnCommand $ action $ _config event
-        Task event hs Nothing <$> getTime
+        handles <- mapM spawnCommand actions
+        Task event handles Nothing <$> getTime
     where
-        event = _event task
+        actions = action $ _config event
+        event   = _event task
 
 
 runSerial :: Task -> IO Task
@@ -173,9 +174,9 @@ failure :: ContextF -> Task -> IO Task
 failure cxf (Task event@(Event n _ d) _ _ startTime) = do
         -- the command failed, log the error, increment errors and set next
         -- time to retry
-        logger $ concat ["running ", n
-                        , " failed, backing off "
-                        , show backoff, " seconds"]
+        logger $ concat [
+            "running '", n , "' failed, backing off ", show backoff, " seconds"
+            ]
 
         next <- (+ backoff) <$> getTime
         elapsed <- negate . (startTime -) <$> getTime

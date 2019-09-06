@@ -17,7 +17,7 @@ runDaemon =
             "mingw32" -> windows
             _         -> unix
     where
-        unix    = "devbot start & disown"
+        unix    = "devbot start"
         windows =
             "powershell.exe -Command Start-Process " ++
             "powershell.exe -WindowStyle hidden {devbot start}"

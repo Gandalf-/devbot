@@ -95,7 +95,8 @@ handle cxf (Task service Nothing _) =
         startService :: IO Task
         startService = do
             -- services are run in directly (not in a shell),
-            -- so we use spawnProcess, not spawnCommand
+            -- so we use spawnProcess, not spawnCommand, this is so we can
+            -- track the pid of the process
             process <- spawnProcess name args
             flushUptime cxf service
             flushPid cxf service process

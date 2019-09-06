@@ -2,9 +2,9 @@ module EventBotSpec (spec) where
 
 import           Apocrypha.Client
 
-import           Devbot.Bot.Common
-import           Devbot.Bot.Event
-import           Devbot.Event
+import           Devbot.Event.Config
+import           Devbot.Event.Runtime
+import           Devbot.Internal.Common
 
 import           Test.Hspec
 

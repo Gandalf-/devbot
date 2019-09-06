@@ -1,6 +1,6 @@
 module ParserSpec (spec) where
 
-import           Devbot.Parser
+import           Devbot.Internal.Parser
 import           Test.Hspec
 
 

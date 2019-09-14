@@ -6,7 +6,6 @@
 
 module Devbot.Internal.System where
 
-import           Control.Monad             (void)
 import           Data.Aeson                (defaultOptions, genericToEncoding)
 import qualified Data.HashMap.Strict       as HM
 import           Data.Text                 (Text)
@@ -19,6 +18,7 @@ import           System.Process
 import qualified System.Win32.Process      as P
 
 #else
+import           Control.Monad             (void)
 import qualified Data.Scientific           as S
 import           System.Exit               (ExitCode (..))
 import           System.Posix.Process      as P

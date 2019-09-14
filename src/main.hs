@@ -10,6 +10,7 @@ import           Devbot.Daemon
 import           Devbot.List
 import           Devbot.Schema
 import           Devbot.Status
+import           Devbot.Table
 
 import           Devbot.Internal.Directory
 import           Devbot.Internal.System
@@ -33,6 +34,7 @@ main = do
                 (exit "stopped")
 
             ["list"]   -> runList
+            ["table"]  -> runTable
             ["status"] -> runStatus
             ["schema"] -> runSchema
 
@@ -57,7 +59,8 @@ usage = unlines
     , "  daemon      - start devbot in the background"
     , "  stop        - stop devbot and all services"
     , ""
-    , "  list        - show a summary of runtime data and config"
+    , "  list        - show a list summary of runtime data and config"
+    , "  table       - show a table summary of runtime data and config"
     , "  status      - give a single character summary of run state"
     , ""
     , "  schema      - show the config file schema"

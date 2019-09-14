@@ -1,4 +1,4 @@
-module ColorText (
+module Devbot.Internal.ColorText (
   Color(..),
   Attribute(..),
   Decoration,

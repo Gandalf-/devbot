@@ -9,34 +9,34 @@ import           System.Info            (os)
 import           Devbot.Internal.System (checkDevbotRunning)
 
 
-data Status
-    = Stopped
-    | Running
-    deriving (Show)
-
-
 runStatus :: IO ()
-runStatus = getStatus >>= printStatus
+runStatus = getStatus >>= putStrLn . printStatus
 
+data Status = Stopped | Running
+    deriving (Show)
 
 getStatus :: IO Status
 getStatus =
-        checkDevbotRunning >>= \case
-            True  -> pure Running
-            False -> pure Stopped
+        (\case
+            True  -> Running
+            False -> Stopped
+        ) <$> checkDevbotRunning
 
 
-printStatus :: Status -> IO ()
+-- | utilities
+
+printStatus :: Status -> String
+-- ^ wrapper since some (most?) windows terminals don't support unicode
 printStatus s
     | os == "mingw32" = plainStatus s
     | otherwise       = fancyStatus s
 
+fancyStatus :: Status -> String
+-- ^ pretty unicode symbols
+fancyStatus Running = "✓"
+fancyStatus Stopped = "✗"
 
-fancyStatus :: Status -> IO ()
-fancyStatus Running = putStrLn "✓"
-fancyStatus Stopped = putStrLn "✗"
-
-
-plainStatus :: Status -> IO ()
-plainStatus Running = putStrLn "+"
-plainStatus Stopped = putStrLn "x"
+plainStatus :: Status -> String
+-- ^ plain symbols
+plainStatus Running = "+"
+plainStatus Stopped = "x"

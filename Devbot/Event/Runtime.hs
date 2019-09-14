@@ -1,5 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 
+{-|
+Module      : Devbot.Event.Runtime
+Description : Handles creating and monitoring event's tasks, which are shell commands to
+              run at a particular interval, potentially with other requirements
+Copyright   : (c) Austin 2019
+License     : MIT
+Maintainer  : austin@anardil.net
+Stability   : stable
+Portability : POSIX, Windows 10
+-}
+
 module Devbot.Event.Runtime where
 
 import           Data.List               (intercalate)
@@ -14,29 +25,33 @@ import           Devbot.Internal.Persist
 
 
 data Task = Task
-        { _event   :: Event
-        , _process :: [ProcessHandle]
-        , _cmds    :: Maybe [String]
-        , _start   :: Integer
+        { _event   :: Event            -- ^ Event configuration data
+        , _process :: [ProcessHandle]  -- ^ currently running processes
+        , _cmds    :: Maybe [String]   -- ^ future commands to run
+        , _start   :: Integer          -- ^ start time for first command
         }
 
 instance Show Task where
+    -- ^ we need a custom show instance since ProcessHandle doesn't have one
     show (Task e _ c s) =
         intercalate ", " [show e, "<process hande>", show c, show s]
 
 instance Eq Task where
+    -- ^ tasks without processes are compared by field, otherwise they're always inequal
     (==) (Task a [] b c) (Task x [] y z) = a == x && b == y && c == z
     (==) _ _                             = False
 
 
 getTasks :: IO [Task]
+-- ^ create tasks from the event information
 getTasks = map makeTask <$> events
     where
         makeTask :: Event -> Task
-        makeTask e = Task e [] Nothing 0
+        makeTask event = Task event [] Nothing 0
 
 
 noRunners :: [Task] -> Bool
+-- ^ do any of these tasks have running process handles?
 noRunners []                         = True
 noRunners (Task _ [] Nothing _ : xs) = noRunners xs
 noRunners (Task{} : _)               = False
@@ -86,6 +101,9 @@ handle cxf task@(Task event hs cmds startTime) =
 
 
 check :: ContextF -> Task -> IO Task
+-- ^ events may have requirements, which are shell snippets we must execute before the
+-- event's actions can be run. if the requirement exits non-zero, we treat that as
+-- failure. events without configured requirements eseentially skip this
 check cxf task@(Task (Event n c d) hs cs s) =
         -- ^ if we can't run, wait 30 seconds before trying again
         requirementsMet cxf n c >>= \case

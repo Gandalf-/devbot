@@ -17,6 +17,8 @@ import qualified Devbot.Service.Config   as S
 
 
 runList :: IO ()
+-- ^ build list summaries of all the currently loaded events + services and display them
+-- to the console
 runList = do
         E.events   >>= sortDo display
         S.services >>= sortDo display
@@ -110,5 +112,5 @@ printOptional (Config _ _ req par one) d =
         printParallel _    = ""
 
         printOneShell :: Bool -> String
-        printOneShell True = ", " <> colorize magenta "isolated"
-        printOneShell _    = ""
+        printOneShell False = ", " <> colorize magenta "isolated"
+        printOneShell _     = ""

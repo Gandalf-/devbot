@@ -10,7 +10,6 @@ import           Devbot.Internal.ColorText (Decoration)
 import           Devbot.Internal.Common
 import           Devbot.Internal.Display
 
-
 import           Devbot.Event.Config       (Event)
 import qualified Devbot.Event.Config       as E
 
@@ -40,7 +39,7 @@ runTable = do
     putStrLn ""
 
 
--- events
+-- | events
 
 eventTable :: CurrentTime -> [Event] -> [String]
 -- ^ build the table data for the events, we start with columns, so we can use
@@ -144,11 +143,11 @@ getServiceAction = S.action . S._config . fst
 
 -- | shared utilities
 
-data Alignment = Righty | Center
+data Alignment = Lefty | Center
 
 buffer :: Alignment -> Int -> String -> String
 -- ^ pad the given string to a particular length, using an alignment scheme
-buffer Righty n s = take n $ s <> cycle " "
+buffer Lefty  n s = take n $ s <> cycle " "
 buffer Center n s = take n body
     where
         body = pad <> s <> cycle " "

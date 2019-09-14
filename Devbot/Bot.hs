@@ -1,5 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 
+{-|
+Module      : Devbot.Bot
+Description : High level orchestration of events and services; this manages loading the
+              configuration file into the devbot database, periodic reloads, and
+              delegating work to the event and service runtime components
+Copyright   : (c) Austin 2019
+License     : MIT
+Maintainer  : austin@anardil.net
+Stability   : stable
+Portability : POSIX, Windows 10
+-}
+
 module Devbot.Bot where
 
 import           Control.Concurrent      (threadDelay)

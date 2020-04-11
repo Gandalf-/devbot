@@ -21,6 +21,4 @@ import           Devbot.Internal.Directory
 defaultContext :: IO Context
 -- ^ provide our own default context, which uses the serverless context for simplicity.
 -- if there was a database available on the network, we could use it, but choose not to
-defaultContext = do
-    path <- getDatabasePath
-    getServerlessContext path
+defaultContext = getDatabasePath >>= getServerlessContext

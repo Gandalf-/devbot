@@ -138,8 +138,7 @@ runSerial task@(Task e _ Nothing _)
         | null actions = pure task
             -- this indicates a bad config
 
-        | useOneShell os = do
-            -- run all actions in one shell, not possible on Windows
+        | oneshell $ _config e = do
             h <- spawnCommand command
             Task e [h] Nothing <$> getTime
 
@@ -151,12 +150,11 @@ runSerial task@(Task e _ Nothing _)
         actions   = action $ _config e
         firstCmd  = head actions
         laterCmds = Just $ tail actions
+        command   = intercalate " && " $ map braceShell actions
 
-        useOneShell "mingw32" = False
-        useOneShell _         = oneshell $ _config e
-
-        command      = intercalate " && " $ map braceShell actions
-        braceShell x = "{ " <> x <> " ; }"
+        braceShell x
+            | os == "mingw32" = x
+            | otherwise       = "{ " <> x <> " ; }"
 
 runSerial task@(Task e _ (Just cs) s)
 -- ^ we've already started, start the next cmd

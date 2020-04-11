@@ -22,6 +22,7 @@ parse ["hour"]    = Just hour
 parse ["day"]     = Just day
 parse ["week"]    = Just week
 parse ["month"]   = Just month
+parse ["year"]    = Just year
 
 parse ["seconds"] = Just 1
 parse ["minutes"] = Just minute
@@ -29,6 +30,7 @@ parse ["hours"]   = Just hour
 parse ["days"]    = Just day
 parse ["weeks"]   = Just week
 parse ["months"]  = Just month
+parse ["years"]   = Just year
 
 parse ("twice":"per":x) = flip div 2 <$> parse x
 
@@ -50,7 +52,8 @@ parse (x:"times":"per":y) = result
         number = readNumber x
         next   = parse y
 
-parse _           = Nothing
+parse [x]           = readNumber x
+parse _             = Nothing
 
 
 -- | Try to be flexible in how we interpret numbers

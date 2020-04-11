@@ -8,6 +8,7 @@ import           System.Exit               (die)
 import           Devbot.Bot
 import           Devbot.Daemon
 import           Devbot.List
+import           Devbot.ParseCheck
 import           Devbot.Schema
 import           Devbot.Status
 import           Devbot.Table
@@ -21,30 +22,23 @@ main = do
         ensureDefaultDirectory
 
         getArgs >>= \case
-            ["start"]  -> ifRunningElse
-                (exit "running")
-                (saveDevbotPid >> runBot)
-
-            ["daemon"] -> ifRunningElse
-                (exit "running")
-                runDaemon
-
-            ["stop"]   -> ifRunningElse
-                stopDaemon
-                (exit "stopped")
+            ["start"]  -> bail "running" `ifRunningElse` (saveDevbotPid >> runBot)
+            ["daemon"] -> bail "running" `ifRunningElse` runDaemon
+            ["stop"]   -> stopDaemon     `ifRunningElse` bail "stopped"
 
             ["list"]   -> runList
             ["table"]  -> runTable
             ["status"] -> runStatus
-            ["schema"] -> runSchema
 
-            ["config"] -> getConfigPath >>= putStrLn
+            ["schema"]   -> runSchema
+            ["config"]   -> getConfigPath >>= putStrLn
+            ("parse":xs) -> runParseCheck xs
 
             -- help text
             _          -> die usage
     where
-        exit :: String -> IO ()
-        exit x = die $ "devbot appears to already be " <> x
+        bail :: String -> IO ()
+        bail x = die $ "devbot appears to already be " <> x
 
         ifRunningElse :: IO b -> IO b -> IO b
         ifRunningElse a b = getStatus >>= \case
@@ -65,4 +59,5 @@ usage = unlines
     , ""
     , "  schema      - show the config file schema"
     , "  config      - show the config file path"
+    , "  parse <exp> - show how devbot will interpet an interval expression"
     ]

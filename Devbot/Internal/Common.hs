@@ -22,9 +22,10 @@ getTime = round <$> getPOSIXTime
 
 
 data HandlesState =
-      StillRunning
-    | AllSuccess
-    | AnyFailure
+        StillRunning
+        | AllSuccess
+        | AnyFailure
+    deriving (Show, Eq)
 
 checkHandles :: [ProcessHandle] -> IO HandlesState
 checkHandles hs = do

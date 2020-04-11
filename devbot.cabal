@@ -2,13 +2,13 @@ name:                devbot
 version:             0.1.1.0
 synopsis:            A lightweight, inspectable task scheduler
 description:         Please see README.md
-homepage:            https://github.com/bitemyapp/hello#readme
+homepage:            https://public.anardil.net/code/devbot/
 license:             BSD3
 license-file:        LICENSE
-author:              Austin Voecks
-maintainer:          austin.voecks@gmail.com
-copyright:           2018, Austin Voecks
-category:            Network
+author:              Austin
+maintainer:          austin@anardil.net
+copyright:           2018, Austin
+category:            Utility
 build-type:          Simple
 cabal-version:       >=1.10
 
@@ -67,6 +67,7 @@ library
     Devbot.Bot
     Devbot.Daemon
     Devbot.List
+    Devbot.ParseCheck
     Devbot.Status
     Devbot.Schema
     Devbot.Table
@@ -75,16 +76,16 @@ library
   build-depends:
     base >= 4.7 && < 5,
     aeson,
-    yaml,
     apocrypha,
     directory,
     filepath,
-    scientific,
     process,
+    scientific,
     text,
     time,
+    vector,
     unordered-containers,
-    vector
+    yaml
 
   if os(windows)
     build-depends:
@@ -102,22 +103,24 @@ test-suite bot
   default-language:    Haskell2010
   build-depends:
     base >= 4.7 && < 5,
-    hspec,
-    QuickCheck,
     aeson,
-    yaml,
     apocrypha,
     devbot,
     directory,
     filepath,
+    hspec,
     process,
+    QuickCheck,
     text,
     time,
-    unordered-containers,
-    vector
+    vector,
+    yaml,
+    unordered-containers
 
   other-modules:
+    CommonSpec
     ParserSpec
-    EventBotSpec
+    SystemSpec
+    EventSpec
 
   build-tool-depends: hspec-discover:hspec-discover == 2.*

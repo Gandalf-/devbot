@@ -34,9 +34,10 @@ instance Displayable Service where
     -- ^ show name, action, and uptime
     display (Service n c) = do
             now <- getTime
-            status <- S.getUptime n >>= \case
-               (Just time) -> pure $ "uptime " <> prettyTime (now - time)
-               Nothing     -> pure "not running"
+            status <- (\case
+                        (Just time) -> "uptime " <> prettyTime (now - time)
+                        Nothing     -> "not running"
+                    ) <$> S.getUptime n
 
             putStrLn $ concat
                [ "service: ", printName n

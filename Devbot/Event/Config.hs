@@ -111,9 +111,9 @@ type DataMap   = HM.HashMap String Data
 events :: IO [Event]
 -- ^ retrieve all events stored in the database
 events = do
-        c <- defaultContext
-        cs <- get c ["devbot", "events"] :: IO (Maybe ConfigMap)
-        ds <- get c ["devbot", "data"  ] :: IO (Maybe DataMap)
+        cx <- defaultContext
+        cs <- get cx ["devbot", "events"] :: IO (Maybe ConfigMap)
+        ds <- get cx ["devbot", "data"  ] :: IO (Maybe DataMap)
 
         let configs = HM.toList . fromMaybe (HM.fromList []) $ cs
             datas = fromMaybe (HM.fromList []) ds

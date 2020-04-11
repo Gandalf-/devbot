@@ -158,7 +158,7 @@ smartBuffer :: Alignment -> [String] -> [String]
 -- truncated and to limit extra output space
 smartBuffer a column = map (buffer a pad) column
     where
-        pad = (+ 4) $ maximum $ map length column
+        pad = (+ 2) $ maximum $ map length column
 
 colorColumns :: [(Decoration, [String])] -> [[String]]
 -- ^ apply the color to all elements for each color + elements pair

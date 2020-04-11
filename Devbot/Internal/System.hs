@@ -15,14 +15,18 @@ import           GHC.Generics
 import           System.Process
 
 #ifdef mingw32_HOST_OS
+-- Windows only
 import qualified System.Win32.Process      as P
 
 #else
+-- Unix only
 import           Control.Monad             (void)
 import qualified Data.Scientific           as S
 import           System.Exit               (ExitCode (..))
 import           System.Posix.Process      as P
 import           System.Posix.Types        (CPid)
+
+-- end
 #endif
 
 import           Devbot.Event.Config       (Config, DataMap)

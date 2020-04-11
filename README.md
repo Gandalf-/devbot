@@ -18,6 +18,7 @@ devbot usage:
 
   schema      - show the config file schema
   config      - show the config file path
+  parse <exp> - show how devbot will interpet an interval expression
 ```
 
 # Devbot
@@ -166,3 +167,39 @@ embedding in your tmux status line.
 
 Shows the accepted configuration file schema, for easy reference when making config file
 modifications.
+
+# devbot parse
+
+Devbot is very flexible in how it can interpret event intervals. You can use the
+`devbot parse` command to test that expressions can be parsed, and verify that they
+evaluate to what you expect.
+
+```
+$ devbot parse every hour
+parsed as: 3600 seconds
+listed as: 1 hour
+
+$ devbot parse hourly
+parsed as: 3600 seconds
+listed as: 1 hour
+
+$ devbot parse every other hour
+parsed as: 7200 seconds
+listed as: 2 hours
+
+$ devbot parse twice hourly
+parsed as: 1800 seconds
+listed as: 30 minutes
+
+$ devbot parse twice every 100 years
+parsed as: 1451520000 seconds
+listed as: 50 years
+
+$ devbot parse 89 times per month
+parsed as: 27182 seconds
+listed as: 7 hours
+
+$ devbot parse 309 times per week
+parsed as: 1957 seconds
+listed as: 32 minutes
+```

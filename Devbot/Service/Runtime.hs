@@ -37,7 +37,7 @@ getTasks = map makeTask <$> services
 handle :: ContextF -> Task -> IO Task
 
 handle _ (Task service (Just (Right p)) s) =
-        -- ^ the service is already running with a pid, see if it's still alive
+        -- the service is already running with a pid, see if it's still alive
         checkPid p >>= \case
             True  -> pure runningTask
                 -- the service is still running, nothing to do
@@ -51,7 +51,7 @@ handle _ (Task service (Just (Right p)) s) =
         resetTask   = Task service Nothing 0
 
 handle _ (Task service (Just (Left h)) s) =
-        -- ^ the service is already running with a phandle, see if it's still alive
+        -- the service is already running with a phandle, see if it's still alive
         checkHandles [h] >>= \case
 
             StillRunning -> pure runningTask
@@ -71,17 +71,17 @@ handle _ (Task service (Just (Left h)) s) =
         resetTask   = Task service Nothing 0
 
 handle cxf (Task service Nothing _) =
-        -- ^ the service is not running
+        -- the service is not running
         -- attempt to recover from the database, then
         -- parse arguments, start the service, save start time
         recoverService cxf (_name service) >>= \case
             (Just (pid, uptime)) -> do
-                -- ^ already running, and we can recover all the state
+                -- already running, and we can recover all the state
                 logger $ "service: " <> _name service <> " state recovered"
                 pure $ Task service (Just . Right $ pid) uptime
 
             Nothing -> do
-                -- ^ not running, start it from scratch
+                -- not running, start it from scratch
                 logger $ "service: " <> _name service <> " starting"
                 startService
     where

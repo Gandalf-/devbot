@@ -22,7 +22,7 @@ instance Ord Service where
 
 
 data ServiceConfig = ServiceConfig
-    -- ^ this comes directly from our config file
+    -- this comes directly from our config file
         { action :: String
         , log    :: Maybe String
         }

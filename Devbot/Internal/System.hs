@@ -36,7 +36,7 @@ import           Devbot.Service.Config     (ServiceConfig)
 
 
 data FileConfig = FileConfig
-    -- ^ this comes directly from our config file
+    -- this comes directly from our config file
         { events       :: HM.HashMap Text Config
         , requirements :: Maybe (HM.HashMap Text Text)
         , services     :: Maybe (HM.HashMap Text ServiceConfig)

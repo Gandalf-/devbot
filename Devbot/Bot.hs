@@ -47,12 +47,12 @@ stateMachine (State _ oldServiceTasks) =
 
         loadDefaultConfig >>= \case
             Left err -> do
-                -- ^ we failed to load the config, we have to give up here
+                -- we failed to load the config, we have to give up here
                 logger $ "config parse error: " <> err
                 pure $ State [] []
 
             Right _  -> do
-                -- ^ we have our new config, merge with previous, and start
+                -- we have our new config, merge with previous, and start
                 es <- E.getTasks
                 ss <- S.getTasks >>= S.merge S.kill oldServiceTasks
 

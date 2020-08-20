@@ -105,7 +105,7 @@ check :: ContextF -> Task -> IO Task
 -- event's actions can be run. if the requirement exits non-zero, we treat that as
 -- failure. events without configured requirements eseentially skip this
 check cxf task@(Task (Event n c d) hs cs s) =
-        -- ^ if we can't run, wait 30 seconds before trying again
+        -- if we can't run, wait 30 seconds before trying again
         requirementsMet cxf n c >>= \case
             True  -> chooseRunner task
 
@@ -157,7 +157,7 @@ runSerial task@(Task e _ Nothing _)
             | otherwise       = "{ " <> x <> " ; }"
 
 runSerial task@(Task e _ (Just cs) s)
--- ^ we've already started, start the next cmd
+-- we've already started, start the next cmd
         | null cs   = pure task  -- this should be impossible thanks to 'handle'
         | otherwise = do
             h <- spawnCommand nextCmd

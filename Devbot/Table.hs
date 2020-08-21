@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Devbot.Table (
     runTable
 ) where
@@ -52,29 +50,18 @@ eventTable :: CurrentTime -> [Event] -> [String]
 -- colorize, and then rotate. the rotation makes the columns into rows, where now the
 -- rows correspond to all the values for a particular event
 eventTable now es =
-        reverse $ map (intercalate "|") $ rotate $ mapMaybe (applyBuffer Center) elements
+        reverse $ map (intercalate "|") $ rotate $
+        mapMaybe (applyBuffer Center . addBorder white) elements
     where
-        elements :: [[(Decoration, String)]]
         elements =
-            [ map (green,)   ["events",  ""] <> map getEventName       ses
-            , map (blue,)    ["every",   ""] <> map getEventInterval   ses
-            , map (yellow,)  ["next",    ""] <> map (getEventNext now) ses
-            , map (cyan,)    ["last",    ""] <> map getEventLast       ses
-            , map (red,)     ["errors",  ""] <> map getEventErrors     ses
-            , map (magenta,) ["options", ""] <> map getEventOptions    ses
+            [ (green,   "Events")  : map getEventName       ses
+            , (blue,    "Every" )  : map getEventInterval   ses
+            , (yellow,  "Next"  )  : map (getEventNext now) ses
+            , (cyan,    "Last"  )  : map getEventLast       ses
+            , (red,     "Errors")  : map getEventErrors     ses
+            , (magenta, "Options") : map getEventOptions    ses
             ]
-
         ses = sort es
-
-        applyBuffer :: Alignment -> [(Decoration, String)] -> Maybe [String]
-        applyBuffer a ds
-                | all (all isSpace) $ tail buffered = Nothing
-                | otherwise                         = Just result
-            where
-                result   = zipWith colorize colors buffered
-
-                colors   = map fst ds
-                buffered = smartBuffer a $ map snd ds
 
 -- | event helpers
 
@@ -123,28 +110,24 @@ serviceTable :: CurrentTime -> [(Service, Uptime)] -> [String]
 -- ^ services are dealt with indentically as events, except that there are different
 -- headers and values used for the columns
 serviceTable now ss =
-        reverse $ map (intercalate "|") $ rotate $ colorColumns columns
+        reverse $ map (intercalate "|") $ rotate $
+        mapMaybe (applyBuffer Center . addBorder white) elements
     where
-        columns = filter (not . columnEmpty) $ zip
-            [blue, green, cyan]
-            $ map (smartBuffer Center) elements
-
         elements =
-            [ ["services", ""] <> map getServiceName sss
-            , ["uptime",   ""] <> map (getServiceUptime now) sss
-            , ["action",   ""] <> map getServiceAction sss
+            [ (blue,  "Services") : map getServiceName         sss
+            , (green, "Uptime")   : map (getServiceUptime now) sss
+            , (cyan,  "Action")   : map getServiceAction       sss
             ]
-
         sss = sort ss
 
 -- | service helpers
 
-getServiceName :: (Service, Uptime) -> String
-getServiceName = S._name . fst
+getServiceName :: (Service, Uptime) -> (Decoration, String)
+getServiceName = (,) blue . S._name . fst
 
-getServiceUptime :: Integer -> (Service, Uptime) -> String
+getServiceUptime :: Integer -> (Service, Uptime) -> (Decoration, String)
 getServiceUptime now (_, uptime) =
-        maybe "dead" display uptime
+        (green, maybe "dead" display uptime)
     where
         display t
                 | time < 60 * 60 = prettyTime time
@@ -152,8 +135,8 @@ getServiceUptime now (_, uptime) =
             where
                 time = now - t
 
-getServiceAction :: (Service, Uptime) -> String
-getServiceAction = S.action . S._config . fst
+getServiceAction :: (Service, Uptime) -> (Decoration, String)
+getServiceAction = (,) cyan . S.action . S._config . fst
 
 
 -- | shared utilities
@@ -175,15 +158,23 @@ smartBuffer a column = map (buffer a pad) column
     where
         pad = (+ 2) $ maximum $ map length column
 
-colorColumns :: [(Decoration, [String])] -> [[String]]
--- ^ apply the color to all elements for each color + elements pair
-colorColumns =
-        map (\(color, xs) -> map (colorize color) xs)
-
 rotate :: [[a]] -> [[a]]
 rotate = reverse . transpose
 
-columnEmpty :: (Decoration, [String]) -> Bool
--- ^ does some element after the first have more content than just spaces? we skip the
--- first element because it's a header and will always be present
-columnEmpty (_, xs) = all (all isSpace) $ tail xs
+addBorder :: Decoration -> [(Decoration, String)] -> [(Decoration, String)]
+addBorder d rows = zip ([c, d] <> cs) ([s, border] <> xs)
+    where
+        (c:cs, s:xs) = unzip rows
+        border = replicate width '-'
+        width = maximum $ map length (s:xs)
+
+applyBuffer :: Alignment -> [(Decoration, String)] -> Maybe [String]
+applyBuffer a ds
+        | all (all isSpace) columns = Nothing
+        | otherwise                 = Just result
+    where
+        result   = zipWith colorize colors buffered
+
+        colors   = map fst ds
+        buffered = smartBuffer a $ map snd ds
+        columns  = tail $ tail buffered   -- ignore header and border

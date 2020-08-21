@@ -78,7 +78,7 @@ printInterval c =
 
 
 printNext :: Data -> Integer -> String
-printNext (Data _ w _) time =
+printNext (Data _ w _ _) time =
         colorize yellow $
             if w - time > 0
                 then "next in " <> t
@@ -88,7 +88,7 @@ printNext (Data _ w _) time =
 
 
 printOptional :: Config -> Data -> String
-printOptional (Config _ _ req par one) d =
+printOptional (Config _ _ req _ par one) d =
         concat [ maybe "" printErrors $ _errors d
                , printDuration $ E._duration d
                , maybe "" printRequire req

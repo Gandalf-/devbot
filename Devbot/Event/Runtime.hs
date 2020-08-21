@@ -14,10 +14,10 @@ Portability : POSIX, Windows 10
 module Devbot.Event.Runtime where
 
 import           Data.List               (intercalate)
+import           Data.Maybe
 import           System.Exit             (ExitCode (..))
 import           System.Info             (os)
-import           System.Process          (ProcessHandle, spawnCommand,
-                                          waitForProcess)
+import           System.Process
 
 import           Devbot.Event.Config
 import           Devbot.Internal.Common
@@ -58,19 +58,16 @@ noRunners (Task{} : _)               = False
 
 
 handle :: ContextF -> Task -> IO Task
-handle cxf task@(Task (Event _ _ d) [] Nothing _) = do
+handle cxf task@(Task e [] Nothing _) = do
         -- not currently running, check to see if we should
-        time <- getTime
+        now <- getTime
 
-        if ready time d
+        if now > _when (_data e)
             -- ready, see if our requirements are met
             then check cxf task
 
             -- not ready, keep waiting
             else pure task
-    where
-        ready :: Integer -> Data -> Bool
-        ready now (Data _ _when _) = now > _when
 
 handle cxf task@(Task _ hs Nothing _) =
         -- we're running, but there's nothing to do after this
@@ -104,22 +101,31 @@ check :: ContextF -> Task -> IO Task
 -- ^ events may have requirements, which are shell snippets we must execute before the
 -- event's actions can be run. if the requirement exits non-zero, we treat that as
 -- failure. events without configured requirements eseentially skip this
-check cxf task@(Task (Event n c d) hs cs s) =
+--
+-- also checks for monitor commands. if these succeed, the command is counted as
+-- a success without having run, if the output is different, then the real
+-- action is run as normal
+check cxf task@(Task e@(Event n c d) hs cs s) =
         -- if we can't run, wait 30 seconds before trying again
         requirementsMet cxf n c >>= \case
-            True  -> chooseRunner task
+            True -> do
+                time <- getTime
+                (newEvent, run) <- monitorMet cxf e
+                if run
+                    then chooseRunner $ task {_event = newEvent }
+                    else success cxf $ task {_event = newEvent, _start = time}
 
-            False -> do
-                now <- getTime
-                pure $ Task (Event n c (backoff now d)) hs cs s
+            False -> waitTask <$> getTime
     where
+        waitTask now = Task (Event n c (backoff now d)) hs cs s
+
         chooseRunner :: (Task -> IO Task)
         chooseRunner
             | parallel c = runParallel
             | otherwise  = runSerial
 
         backoff :: Integer -> Data -> Data
-        backoff now (Data _d _ _e) = Data _d (now + 30) _e
+        backoff now _d = _d { _when = now + 30}
 
 
 runParallel :: Task -> IO Task
@@ -182,8 +188,7 @@ success cxf (Task event@(Event _ c _) _ _ startTime) = do
         next = nextRun startTime c
 
         clearErrors :: Event -> Event
-        clearErrors (Event n co (Data du wh _)) =
-            Event n co (Data du wh Nothing)
+        clearErrors e = e { _data = (_data e) { _errors = Nothing } }
 
 
 failure :: ContextF -> Task -> IO Task
@@ -206,20 +211,21 @@ failure cxf (Task event@(Event n _ d) _ _ startTime) = do
         backoff = getBackoff d
 
         getBackoff :: Data -> Integer
-        getBackoff (Data _ _ Nothing)  = 30
-        getBackoff (Data _ _ (Just e)) = (e + 1) * 60
+        getBackoff (Data _ _ Nothing  _) = 30
+        getBackoff (Data _ _ (Just e) _) = (e + 1) * 60
 
         incrementError :: Event -> Event
-        incrementError (Event _n _c (Data _d _w Nothing)) =
-            Event _n _c (Data _d _w (Just 1))
-
-        incrementError (Event _n _c (Data _d _w (Just e))) =
-            Event _n _c (Data _d _w (Just $ e + 1))
+        incrementError e = e {
+            _data = (_data e) {
+                _errors = Just $ maybe 1 (+ 1) $ _errors $ _data e}
+            }
 
 
 updateTime :: Event -> Integer -> Integer -> Event
-updateTime (Event n c (Data _ _ e)) newTime elapsed =
-        Event n c (Data elapsed newTime e)
+updateTime e newTime elapsed = e {
+        _data = (_data e) {
+            _duration = elapsed, _when = newTime}
+        }
 
 
 nextRun :: Integer -> Config -> Integer
@@ -233,8 +239,8 @@ flush cxf (Event n _ d) = do
 
 
 requirementsMet :: ContextF -> String -> Config -> IO Bool
-requirementsMet _   _ (Config _ _ Nothing  _ _)  = pure True
-requirementsMet cxf n (Config _ _ (Just r) _ _) = do
+requirementsMet _   _ (Config _ _ Nothing  _ _ _)  = pure True
+requirementsMet cxf n (Config _ _ (Just r) _ _ _) = do
         cx <- cxf
         get cx ["devbot", "requirements", r] >>= \case
             Nothing  -> logger doesntExist >> pure False
@@ -251,3 +257,24 @@ requirementsMet cxf n (Config _ _ (Just r) _ _) = do
 
         cmdFailed =
           "requirement " <> r <> " for " <> n <> " not met"
+
+monitorMet :: ContextF -> Event -> IO (Event, Bool)
+monitorMet _   e@(Event _ (Config _ _ _ Nothing  _ _) _) = pure (e, True)
+monitorMet cxf e@(Event n (Config _ _ _ (Just c) _ _) d) = do
+        (code, new_output, _) <- readCreateProcessWithExitCode (shell c) ""
+
+        case code of
+            ExitSuccess ->
+                if new_output == old_output
+                    then pure (e, False)
+                    else do
+                        let new = e {_data = d {_monitorOutput = Just new_output}}
+                        flush cxf new
+                        pure (new, True)
+
+            _ -> logger cmdFailed >> pure (e, False)
+    where
+        cmdFailed =
+          "monitoring command \"" <> c <> "\" for " <> n <> " failed"
+
+        old_output = fromMaybe "" $ _monitorOutput $ _data e

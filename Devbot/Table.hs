@@ -1,10 +1,13 @@
+{-# LANGUAGE TupleSections #-}
+
 module Devbot.Table (
     runTable
 ) where
 
+import           Control.Monad
 import           Data.Char                 (isSpace)
 import           Data.List                 (intercalate, sort, transpose)
-import           Data.Maybe                (fromMaybe)
+import           Data.Maybe                (mapMaybe, isJust)
 
 import           Devbot.Internal.ColorText (Decoration)
 import           Devbot.Internal.Common
@@ -30,10 +33,12 @@ runTable = do
 
     putStrLn ""
     E.events >>= (mapM_ putStrLn . eventTable now)
-    putStr "\n\n"
 
     -- we pair uptime and service info so all the IO is isolated to this function
     ss <- S.services
+    unless (null ss) $
+        putStrLn ""
+
     uptimes <- mapM (S.getUptime . S._name) ss
     mapM_ putStrLn $ serviceTable now (zip ss uptimes)
     putStrLn ""
@@ -47,63 +52,69 @@ eventTable :: CurrentTime -> [Event] -> [String]
 -- colorize, and then rotate. the rotation makes the columns into rows, where now the
 -- rows correspond to all the values for a particular event
 eventTable now es =
-        reverse $ map (intercalate "|") $ rotate $ colorColumns columns
+        reverse $ map (intercalate "|") $ rotate $ mapMaybe (applyBuffer Center) elements
     where
-        columns = filter (not . columnEmpty) $ zip
-            [green, blue, yellow, cyan, red, magenta, magenta]
-            $ map (smartBuffer Center) elements
-
+        elements :: [[(Decoration, String)]]
         elements =
-            [ ["events",  ""] <> map getEventName ses
-            , ["every",   ""] <> map getEventInterval ses
-            , ["next",    ""] <> map (getEventNext now) ses
-            , ["last",    ""] <> map getEventLast ses
-            , ["errors",  ""] <> map getEventErrors ses
-            , ["require", ""] <> map getEventRequires ses
-            , ["options", ""] <> map getEventOptions ses
+            [ map (green,)   ["events",  ""] <> map getEventName       ses
+            , map (blue,)    ["every",   ""] <> map getEventInterval   ses
+            , map (yellow,)  ["next",    ""] <> map (getEventNext now) ses
+            , map (cyan,)    ["last",    ""] <> map getEventLast       ses
+            , map (red,)     ["errors",  ""] <> map getEventErrors     ses
+            , map (magenta,) ["options", ""] <> map getEventOptions    ses
             ]
 
         ses = sort es
 
+        applyBuffer :: Alignment -> [(Decoration, String)] -> Maybe [String]
+        applyBuffer a ds
+                | all (all isSpace) $ tail buffered = Nothing
+                | otherwise                         = Just result
+            where
+                result   = zipWith colorize colors buffered
+
+                colors   = map fst ds
+                buffered = smartBuffer a $ map snd ds
+
 -- | event helpers
 
-getEventName :: Event -> String
-getEventName = E._name
+getEventName :: Event -> (Decoration, String)
+getEventName = (,) green . E._name
 
-getEventInterval :: Event -> String
-getEventInterval = clean . prettyTime . E.interval . E._config
+getEventInterval :: Event -> (Decoration, String)
+getEventInterval = (,) blue . clean . prettyTime . E.interval . E._config
 
-getEventNext :: CurrentTime -> Event -> String
-getEventNext now e =
-        if next > 0
-            then prettyTime next
-            else "now"
+getEventNext :: CurrentTime -> Event -> (Decoration, String)
+getEventNext now e
+        | next > 0  = (yellow, prettyTime next)
+        | otherwise = (white, "now")
     where
         next = E._when (E._data e) - now
 
-getEventLast :: Event -> String
+getEventLast :: Event -> (Decoration, String)
 getEventLast e
-        | null time = "instant"
-        | otherwise = time
+        | time == 0       = (cyan, "instant")
+        | time < interval = (cyan, prettyTime time)
+        | otherwise       = (red, prettyTime time)
     where
-        time = prettyTime . E._duration $ E._data e
+        time = E._duration $ E._data e
+        interval = E.interval $ E._config e
 
-getEventRequires :: Event -> String
-getEventRequires = fromMaybe "" . E.require . E._config
-
-getEventErrors :: Event -> String
+getEventErrors :: Event -> (Decoration, String)
 getEventErrors e =
-        case count of
+        (,) red $ case count of
             Nothing  -> ""
             (Just c) -> show c
     where
         count = E._errors $ E._data e
 
-getEventOptions :: Event -> String
-getEventOptions e = unwords [parallel, oneshell]
+getEventOptions :: Event -> (Decoration, String)
+getEventOptions e = (magenta, unwords [require, monitor, parallel, oneshell])
     where
         parallel = if E.parallel $ E._config e then "P" else ""
         oneshell = if E.oneshell $ E._config e then "" else "O"
+        require  = if isJust (E.require $ E._config e) then "R" else ""
+        monitor  = if isJust (E.monitor $ E._config e) then "M" else ""
 
 
 -- | services
@@ -133,9 +144,13 @@ getServiceName = S._name . fst
 
 getServiceUptime :: Integer -> (Service, Uptime) -> String
 getServiceUptime now (_, uptime) =
-        case uptime of
-            Nothing  -> "dead"
-            (Just u) -> prettyTime $ now - u
+        maybe "dead" display uptime
+    where
+        display t
+                | time < 60 * 60 = prettyTime time
+                | otherwise      = granularTime time
+            where
+                time = now - t
 
 getServiceAction :: (Service, Uptime) -> String
 getServiceAction = S.action . S._config . fst

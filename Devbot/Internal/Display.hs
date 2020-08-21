@@ -5,8 +5,11 @@ import           Devbot.Internal.Parser
 
 data Iteration = First | Second | Third
 
+granularTime :: Integer -> String
+granularTime = pTime First
+
 prettyTime :: Integer -> String
-prettyTime = pTime First
+prettyTime = pTime Second
 
 pTime :: Iteration -> Integer -> String
 -- ^ pretty time that does all the work. show the two highest denominations of
@@ -14,21 +17,21 @@ pTime :: Iteration -> Integer -> String
 --
 -- 121  = "2 minutes, 1 second"
 -- 3661 = "1 hour, 1 minute"     -- note that seconds are omitted
-pTime Second _ = ""
+pTime Third _ = ""
 pTime b i
         | i == 0     = ""
-        | i < minute = before <> showTime i "second"
-        | i < hour   = before <> showTime (div i minute) "minute" <> pTime (next b) (mod i minute)
-        | i < day    = before <> showTime (div i hour)   "hour"   <> pTime (next b) (mod i hour)
-        | i < week   = before <> showTime (div i day)    "day"    <> pTime (next b) (mod i day)
-        | i < month  = before <> showTime (div i week)   "week"   <> pTime (next b) (mod i week)
-        | i < year   = before <> showTime (div i month)  "month"  <> pTime (next b) (mod i month)
-        | otherwise  = before <> showTime (div i year)   "year"   <> pTime (next b) (mod i year)
+        | i < minute = showTime i "second"              <> after
+        | i < hour   = showTime (div i minute) "minute" <> after <> pTime (next b) (mod i minute)
+        | i < day    = showTime (div i hour)   "hour"   <> after <> pTime (next b) (mod i hour)
+        | i < week   = showTime (div i day)    "day"    <> after <> pTime (next b) (mod i day)
+        | i < month  = showTime (div i week)   "week"   <> after <> pTime (next b) (mod i week)
+        | i < year   = showTime (div i month)  "month"  <> after <> pTime (next b) (mod i month)
+        | otherwise  = showTime (div i year)   "year"   <> after <> pTime (next b) (mod i year)
     where
-        before :: String
-        before = case b of
-            First -> ""
-            _     -> ", "
+        after :: String
+        after = case b of
+            First -> ", "
+            _     -> ""
 
         showTime :: Integer -> String -> String
         showTime 1 s = "1 " <> s
@@ -64,3 +67,6 @@ cyan = (Cyan,   NoColor, Null)
 
 magenta :: Decoration
 magenta = (Magenta,   NoColor, Null)
+
+white :: Decoration
+white = (White,   NoColor, Null)

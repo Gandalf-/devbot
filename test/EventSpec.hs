@@ -14,11 +14,11 @@ import           Test.Hspec
 spec :: Spec
 spec = do
 
-        -- | helpers
+        -- helpers
         describe "updateTime" $
             it "works" $ do
                 let updatedEvent = Event "sample" sampleConfig newData
-                    newData = Data 20 15 Nothing
+                    newData = Data 20 15 Nothing Nothing
                 updateTime sampleEvent 15 20 `shouldBe` updatedEvent
 
         describe "nextRun" $
@@ -26,7 +26,7 @@ spec = do
                 nextRun 0 sampleConfig `shouldBe` 10
 
 
-        -- | minor IO
+        -- minor IO
         describe "flush" $
             it "works" $ do
                 c <- getMemoryContext
@@ -36,7 +36,7 @@ spec = do
                 d <- get c ["devbot", "data", "sample"] :: IO (Maybe Data)
                 d `shouldBe` Just sampleData
 
-        -- | success
+        --  success
         describe "success" $
             it "works" $ do
                 -- update elapsed time, clear errors
@@ -45,15 +45,15 @@ spec = do
 
                 let cxf = pure c
                     expectedTask = Task e [] Nothing 0
-                    e = Event "sample" sampleConfig $ Data now 10 Nothing
+                    e = Event "sample" sampleConfig $ Data now 10 Nothing Nothing
 
                 success cxf sampleErrorTask `shouldReturn` expectedTask
 
 
-        -- | failure
+        -- failure
 
 
-        -- | requirements
+        -- requirements
         describe "requirementsMet" $
             it "no requirements" $
                 requirementsMet getMemoryContext "sample" sampleConfig `shouldReturn` True
@@ -81,7 +81,7 @@ spec = do
                 requirementsMet getMemoryContext "sample" sampleReqConfig `shouldReturn` False
 
 
-        -- | serial run
+        -- serial run
         describe "runSerial: simple" $
             it "a single action produces a single handle" $
                 testTaskRun runSerial 1 (Just 0) sampleTask
@@ -94,7 +94,7 @@ spec = do
             it "starts the first action, sets the remaining as pending" $
                 testTaskRun runSerial 1 (Just 2) sampleShellTask
 
-        -- | parallel run
+        -- parallel run
         describe "runParallel" $
             it "creates handles for all actions immediately" $
                 testTaskRun runParallel 3 Nothing sampleMultiTask
@@ -103,25 +103,25 @@ spec = do
         -- defaults, one action
         sampleTask = Task sampleEvent [] Nothing 0
         sampleEvent = Event "sample" sampleConfig sampleData
-        sampleConfig = Config ["echo a"] 10 Nothing False False
+        sampleConfig = Config ["echo a"] 10 Nothing Nothing False False
 
         -- multiple actions, multiple shells
         sampleShellTask = Task sampleShellEvent [] Nothing 0
         sampleShellEvent = Event "sample" sampleShellConfig sampleData
-        sampleShellConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing False False
+        sampleShellConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing Nothing False False
 
         -- multiple actions, one shell
         sampleMultiTask = Task sampleMultiEvent [] Nothing 0
         sampleMultiEvent = Event "sample" sampleMultiConfig sampleData
-        sampleMultiConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing False True
+        sampleMultiConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing Nothing False True
 
         sampleErrorTask = Task sampleErrorEvent [] Nothing 0
         sampleErrorEvent = Event "sample" sampleConfig sampleErrorData
 
-        sampleReqConfig = Config ["echo a"] 10 (Just "myreq") False False
+        sampleReqConfig = Config ["echo a"] 10 (Just "myreq") Nothing False False
 
-        sampleData = Data 0 0 Nothing
-        sampleErrorData = Data 0 1 Nothing
+        sampleData = Data 0 0 Nothing Nothing
+        sampleErrorData = Data 0 1 Nothing Nothing
 
 
 testTaskRun :: (Task -> IO Task) -> Int -> Maybe Int -> Task -> IO ()

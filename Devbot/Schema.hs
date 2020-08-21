@@ -23,6 +23,7 @@ schema = unlines
     , "    action:   <command string>"
     , "    interval: [<seconds>|hourly|daily|weekly|...]"
     , "    require: <requirement name>"
+    , "    monitor: <monitoring command>"
     , ""
     , "requirements:"
     , "  <req name>: <command string>"

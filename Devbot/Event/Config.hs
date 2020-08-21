@@ -32,9 +32,10 @@ instance Ord Event where
 -- | Data
 -- run time information for a devbot action, populated by devbot
 data Data = Data
-        { _duration :: !Integer
-        , _when     :: !Integer
-        , _errors   :: !(Maybe Integer)
+        { _duration      :: !Integer
+        , _when          :: !Integer
+        , _errors        :: !(Maybe Integer)
+        , _monitorOutput :: !(Maybe String)
         }
     deriving (Show, Eq, Generic)
 
@@ -50,6 +51,7 @@ data Config = Config
         { action   :: ![String]
         , interval :: !Integer
         , require  :: !(Maybe String)
+        , monitor  :: !(Maybe String)
         , parallel :: !Bool
         , oneshell :: !Bool
         }
@@ -79,6 +81,7 @@ instance FromJSON Config where
             ]
 
         require  <- o .:? "require"
+        monitor  <- o .:? "monitor"
 
         -- parallel may not exist or be a bool
         parallel <- asum [
@@ -124,4 +127,4 @@ events = do
 
         return $ map parse configs
     where
-        defaultData = Data 0 0 Nothing
+        defaultData = Data 0 0 Nothing Nothing

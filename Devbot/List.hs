@@ -78,7 +78,7 @@ printInterval c =
 
 
 printNext :: Data -> Integer -> String
-printNext (Data _ w _ _) time =
+printNext (Data _ w _ _ _) time =
         colorize yellow $
             if w - time > 0
                 then "next in " <> t

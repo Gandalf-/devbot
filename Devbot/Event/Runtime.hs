@@ -18,10 +18,12 @@ import           Data.Maybe
 import           System.Exit             (ExitCode (..))
 import           System.Info             (os)
 import           System.Process
+import           Data.Time.Clock
 
 import           Devbot.Event.Config
 import           Devbot.Internal.Common
 import           Devbot.Internal.Persist
+import           Devbot.Internal.Monitor
 
 
 data Task = Task
@@ -124,7 +126,7 @@ check cxf task@(Task e@(Event n c d) hs cs s) =
             | parallel c = runParallel
             | otherwise  = runSerial
 
-        backoff :: Integer -> Data -> Data
+        backoff :: Seconds -> Data -> Data
         backoff now _d = _d { _when = now + 30}
 
 
@@ -145,7 +147,7 @@ runSerial task@(Task e _ Nothing _)
             -- this indicates a bad config
 
         | oneshell $ _config e = do
-            h <- spawnCommand command
+            h <- spawnCommand cmd
             Task e [h] Nothing <$> getTime
 
         | otherwise = do
@@ -156,7 +158,7 @@ runSerial task@(Task e _ Nothing _)
         actions   = action $ _config e
         firstCmd  = head actions
         laterCmds = Just $ tail actions
-        command   = intercalate " && " $ map braceShell actions
+        cmd       = intercalate " && " $ map braceShell actions
 
         braceShell x
             | os == "mingw32" = x
@@ -177,9 +179,10 @@ success :: ContextF -> Task -> IO Task
 success cxf (Task event@(Event _ c _) _ _ startTime) = do
         -- the command succeeded, set errors to Nothing, and determine next
         -- time to run
-        elapsed <- negate . (startTime -) <$> getTime
+        now <- getTime
 
-        let newEvent = clearErrors $ updateTime event next elapsed
+        let elapsed  = now - startTime
+            newEvent = clearErrors $ updateTimes event now next elapsed
             newTask  = Task newEvent [] Nothing 0
 
         flush cxf newEvent
@@ -199,10 +202,10 @@ failure cxf (Task event@(Event n _ d) _ _ startTime) = do
             "running '", n , "' failed, backing off ", show backoff, " seconds"
             ]
 
-        next <- (+ backoff) <$> getTime
-        elapsed <- negate . (startTime -) <$> getTime
-
-        let newEvent = incrementError $ updateTime event next elapsed
+        now <- getTime
+        let next     = now + backoff
+            elapsed  = now - startTime
+            newEvent = incrementError $ updateTimes event now next elapsed
             newTask  = Task newEvent [] Nothing 0
 
         flush cxf newEvent
@@ -210,9 +213,8 @@ failure cxf (Task event@(Event n _ d) _ _ startTime) = do
     where
         backoff = getBackoff d
 
-        getBackoff :: Data -> Integer
-        getBackoff (Data _ _ Nothing  _) = 30
-        getBackoff (Data _ _ (Just e) _) = (e + 1) * 60
+        getBackoff :: Data -> Seconds
+        getBackoff = maybe 30 (\e -> (e + 1) * 60) . _errors
 
         incrementError :: Event -> Event
         incrementError e = e {
@@ -221,14 +223,15 @@ failure cxf (Task event@(Event n _ d) _ _ startTime) = do
             }
 
 
-updateTime :: Event -> Integer -> Integer -> Event
-updateTime e newTime elapsed = e {
+updateTimes :: Event -> Seconds -> Seconds -> Seconds -> Event
+-- record when we ran, how long we took to run, and the next time to run
+updateTimes e now next elapsed = e {
         _data = (_data e) {
-            _duration = elapsed, _when = newTime}
+            _lastRun = Just now, _duration = elapsed, _when = next}
         }
 
 
-nextRun :: Integer -> Config -> Integer
+nextRun :: Seconds -> Config -> Seconds
 nextRun time config = time + interval config
 
 
@@ -259,8 +262,11 @@ requirementsMet cxf n (Config _ _ (Just r) _ _ _) = do
           "requirement " <> r <> " for " <> n <> " not met"
 
 monitorMet :: ContextF -> Event -> IO (Event, Bool)
+-- no monitor information provided
 monitorMet _   e@(Event _ (Config _ _ _ Nothing  _ _) _) = pure (e, True)
-monitorMet cxf e@(Event n (Config _ _ _ (Just c) _ _) d) = do
+
+-- monitor command provided
+monitorMet cxf e@(Event n (Config _ _ _ (Just (Monitor (Just c) _ _)) _ _) d) = do
         (code, new_output, _) <- readCreateProcessWithExitCode (shell c) ""
 
         case code of
@@ -278,3 +284,22 @@ monitorMet cxf e@(Event n (Config _ _ _ (Just c) _ _) d) = do
           "monitoring command \"" <> c <> "\" for " <> n <> " failed"
 
         old_output = fromMaybe "" $ _monitorOutput $ _data e
+
+-- monitor with implied time, typically since the last time we ran
+monitorMet _ e@(Event _ (Config _ i _ (Just (Monitor Nothing (Just p) r)) _ _) d) = do
+        shift <- monitorShift (_lastRun d) i
+        time <- since shift <$> getCurrentTime
+        (,) e <$> pathChangedSince r time p
+
+-- something else
+monitorMet _ e = fail $ "bad configuration for " <> _name e
+
+
+monitorShift :: Maybe Seconds -> Seconds -> IO Seconds
+-- seconds into the past we should look for changes, if we have our last run,
+-- use the time since then. otherwise, use our interval
+monitorShift Nothing int = pure int
+monitorShift (Just l) _ = do
+        now <- getTime
+        print $ "using shift " <> show (now - l)
+        pure $ now - l

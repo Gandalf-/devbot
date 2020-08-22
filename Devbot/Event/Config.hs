@@ -34,6 +34,7 @@ instance Ord Event where
 data Data = Data
         { _duration      :: !Integer
         , _when          :: !Integer
+        , _lastRun       :: !(Maybe Integer)
         , _errors        :: !(Maybe Integer)
         , _monitorOutput :: !(Maybe String)
         }
@@ -45,13 +46,24 @@ instance ToJSON Data where
     toEncoding = genericToEncoding defaultOptions
 
 
+data Monitor = Monitor
+        { command     :: Maybe String
+        , changePath  :: Maybe FilePath
+        , ignoreRegex :: Maybe String
+        }
+    deriving (Show, Eq, Generic)
+
+instance FromJSON Monitor where
+instance ToJSON Monitor where
+    toEncoding = genericToEncoding defaultOptions
+
 -- | Config
 -- devbot action specification, comes from config file
 data Config = Config
         { action   :: ![String]
         , interval :: !Integer
         , require  :: !(Maybe String)
-        , monitor  :: !(Maybe String)
+        , monitor  :: !(Maybe Monitor)
         , parallel :: !Bool
         , oneshell :: !Bool
         }
@@ -127,4 +139,4 @@ events = do
 
         return $ map parse configs
     where
-        defaultData = Data 0 0 Nothing Nothing
+        defaultData = Data 0 0 Nothing Nothing Nothing

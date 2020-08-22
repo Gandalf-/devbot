@@ -60,9 +60,10 @@ library
     Devbot.Internal.ColorText
     Devbot.Internal.Display
     Devbot.Internal.Directory
+    Devbot.Internal.Monitor
     Devbot.Internal.Parser
-    Devbot.Internal.System
     Devbot.Internal.Persist
+    Devbot.Internal.System
 
     Devbot.Bot
     Devbot.Daemon
@@ -80,6 +81,7 @@ library
     directory,
     filepath,
     process,
+    regex-tdfa,
     scientific,
     text,
     time,

@@ -13,8 +13,8 @@ type ContextF = IO Context
 
 logger :: String -> IO ()
 logger msg = do
-        time <- getCurrentTime
-        putStrLn $ "devbot: " <> show time <> " " <> msg
+        time <- takeWhile (/= '.') . show <$> getCurrentTime
+        putStrLn $ "devbot: " <> time <> " " <> msg
 
 
 getTime :: IO Integer

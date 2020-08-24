@@ -124,5 +124,6 @@ test-suite bot
     ParserSpec
     SystemSpec
     EventSpec
+    MonitorSpec
 
   build-tool-depends: hspec-discover:hspec-discover == 2.*

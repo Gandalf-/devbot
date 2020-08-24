@@ -67,7 +67,6 @@ handle cxf task@(Task e [] Nothing _) = do
         if now > _when (_data e)
             -- ready, see if our requirements are met
             then check cxf task
-
             -- not ready, keep waiting
             else pure task
 
@@ -90,13 +89,11 @@ handle cxf task@(Task event hs cmds startTime) =
         checkHandles hs >>= \case
             StillRunning -> pure task
 
-            AllSuccess ->
-                -- clear handles, preserve start time, and try to start the next command
-                check cxf $ Task event [] cmds startTime
+            -- clear handles, preserve start time, and try to start the next command
+            AllSuccess -> check cxf $ Task event [] cmds startTime
 
-            AnyFailure ->
-                -- something failed, we'll give up here, even though there's more to do
-                failure cxf task
+            -- something failed, we'll give up here, even though there's more to do
+            AnyFailure -> failure cxf task
 
 
 check :: ContextF -> Task -> IO Task
@@ -108,15 +105,19 @@ check :: ContextF -> Task -> IO Task
 -- a success without having run, if the output is different, then the real
 -- action is run as normal
 check cxf task@(Task e@(Event n c d) hs cs s) =
-        -- if we can't run, wait 30 seconds before trying again
         requirementsMet cxf n c >>= \case
+
+            -- no requirements, or requirement met, check for monitor configuration
             True -> do
                 time <- getTime
                 (newEvent, run) <- monitorMet cxf e
                 if run
                     then chooseRunner $ task {_event = newEvent }
-                    else success cxf $ task {_event = newEvent, _start = time}
+                    else do
+                        logger $ "monitor for " <> n <> " found no changes"
+                        success cxf $ task {_event = newEvent, _start = time}
 
+            -- if we can't run, wait 30 seconds before trying again
             False -> waitTask <$> getTime
     where
         waitTask now = Task (Event n c (backoff now d)) hs cs s
@@ -188,7 +189,7 @@ success cxf (Task event@(Event _ c _) _ _ startTime) = do
         flush cxf newEvent
         pure newTask
     where
-        next = nextRun startTime c
+        next = startTime + interval c
 
         clearErrors :: Event -> Event
         clearErrors e = e { _data = (_data e) { _errors = Nothing } }
@@ -231,10 +232,6 @@ updateTimes e now next elapsed = e {
         }
 
 
-nextRun :: Seconds -> Config -> Seconds
-nextRun time config = time + interval config
-
-
 flush :: ContextF -> Event -> IO ()
 flush cxf (Event n _ d) = do
         cx <- cxf
@@ -255,15 +252,13 @@ requirementsMet cxf n (Config _ _ (Just r) _ _ _) = do
                 ExitSuccess -> pure True
                 _           -> logger cmdFailed >> pure False
 
-        doesntExist =
-          n <> " references requirement that doesn't exist"
+        doesntExist = n <> " references a requirement that doesn't exist"
+        cmdFailed   = "requirement " <> r <> " for " <> n <> " not met"
 
-        cmdFailed =
-          "requirement " <> r <> " for " <> n <> " not met"
 
 monitorMet :: ContextF -> Event -> IO (Event, Bool)
 -- no monitor information provided
-monitorMet _   e@(Event _ (Config _ _ _ Nothing  _ _) _) = pure (e, True)
+monitorMet _  e@(Event _ (Config _ _ _ Nothing _ _) _) = pure (e, True)
 
 -- monitor command provided
 monitorMet cxf e@(Event n (Config _ _ _ (Just (Monitor (Just c) _ _)) _ _) d) = do
@@ -280,19 +275,17 @@ monitorMet cxf e@(Event n (Config _ _ _ (Just (Monitor (Just c) _ _)) _ _) d) = 
 
             _ -> logger cmdFailed >> pure (e, False)
     where
-        cmdFailed =
-          "monitoring command \"" <> c <> "\" for " <> n <> " failed"
-
+        cmdFailed  = "monitoring command \"" <> c <> "\" for " <> n <> " failed"
         old_output = fromMaybe "" $ _monitorOutput $ _data e
 
 -- monitor with implied time, typically since the last time we ran
 monitorMet _ e@(Event _ (Config _ i _ (Just (Monitor Nothing (Just p) r)) _ _) d) = do
         shift <- monitorShift (_lastRun d) i
-        time <- since shift <$> getCurrentTime
+        time  <- since shift <$> getCurrentTime
         (,) e <$> pathChangedSince r time p
 
 -- something else
-monitorMet _ e = fail $ "bad configuration for " <> _name e
+monitorMet _ e = fail $ "bad monitor configuration for " <> _name e
 
 
 monitorShift :: Maybe Seconds -> Seconds -> IO Seconds
@@ -301,5 +294,4 @@ monitorShift :: Maybe Seconds -> Seconds -> IO Seconds
 monitorShift Nothing int = pure int
 monitorShift (Just l) _ = do
         now <- getTime
-        print $ "using shift " <> show (now - l)
         pure $ now - l

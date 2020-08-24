@@ -8,6 +8,7 @@ module Devbot.Internal.System where
 
 import           Data.Aeson                (defaultOptions, genericToEncoding)
 import qualified Data.HashMap.Strict       as HM
+import           Data.Maybe
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import           Data.Yaml
@@ -29,7 +30,7 @@ import           System.Posix.Types        (CPid)
 -- end
 #endif
 
-import           Devbot.Event.Config       (Config, DataMap)
+import           Devbot.Event.Config       (Config, DataMap, Valid (..))
 import           Devbot.Internal.Directory
 import           Devbot.Internal.Persist
 import           Devbot.Service.Config     (ServiceConfig)
@@ -43,8 +44,18 @@ data FileConfig = FileConfig
         }
     deriving (Show, Eq, Generic)
 
-instance FromJSON FileConfig where
+instance Valid FileConfig where
+    valid (FileConfig e _ _)
+            | errors /= [] = Just $ unlines errors
+            | otherwise    = Nothing
+        where
+            errors = catMaybes $ zipWith validWithContext names configs
+            (names, configs) = unzip $ HM.toList e
 
+            validWithContext :: Valid a => Text -> a -> Maybe String
+            validWithContext t m = (\s -> T.unpack t <> ": " <> s) <$> valid m
+
+instance FromJSON FileConfig where
 instance ToJSON FileConfig where
         toEncoding = genericToEncoding defaultOptions
 
@@ -54,7 +65,6 @@ instance ToJSON FileConfig where
 
 instance ToJSON CPid where
     toJSON pid = Number $ S.scientific (toInteger pid) 0
-
 instance FromJSON CPid where
     parseJSON = withScientific "CPid" $ \o -> maybe
             (fail $ "value is not a number!" ++ show o)
@@ -65,13 +75,15 @@ instance FromJSON CPid where
 
 loadDefaultConfig :: IO (Either String ())
 -- ^ read, parse and persist to the database the default config
-loadDefaultConfig = getConfigPath >>= decodeFileEither >>= setConfig
+loadDefaultConfig = getConfigPath >>= decodeFileEither >>= \case
+        (Left err)     -> pure $ Left $ show err
+        (Right config) -> case valid config of
+            Nothing  -> Right <$> setConfig config
+            (Just s) -> pure $ Left s
 
 
-setConfig :: Either ParseException FileConfig -> IO (Either String ())
-setConfig (Left err) = pure $ Left $ show err
-
-setConfig (Right fileConfig) = do
+setConfig :: FileConfig -> IO ()
+setConfig fileConfig = do
         cx <- defaultContext
 
         -- apply items from config file individually
@@ -85,7 +97,6 @@ setConfig (Right fileConfig) = do
             (Just ds) -> set cx ["devbot", "data"] $ validData ds
 
         -- leave everything else (like pid) alone
-        pure $ Right ()
     where
         validData  = HM.filterWithKey (\ k _ -> T.pack k `elem` eventNames)
         eventNames = HM.keys $ events fileConfig

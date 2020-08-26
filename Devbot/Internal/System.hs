@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP           #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase    #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 

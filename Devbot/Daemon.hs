@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Devbot.Daemon where
 
 import           Control.Monad           (void)

@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Main where
 
 import           System.Environment        (getArgs)
@@ -9,6 +7,7 @@ import           Devbot.Bot
 import           Devbot.Daemon
 import           Devbot.List
 import           Devbot.ParseCheck
+import           Devbot.Run
 import           Devbot.Schema
 import           Devbot.Status
 import           Devbot.Table
@@ -22,13 +21,16 @@ main = do
         ensureDefaultDirectory
 
         getArgs >>= \case
-            ["start"]  -> bail "running" `ifRunningElse` (saveDevbotPid >> runBot)
-            ["daemon"] -> bail "running" `ifRunningElse` runDaemon
-            ["stop"]   -> stopDaemon     `ifRunningElse` bail "stopped"
+            ["start"]   -> bail "running" `ifRunningElse` (saveDevbotPid >> runBot)
+            ["daemon"]  -> bail "running" `ifRunningElse` runDaemon
+            ["stop"]    -> stopDaemon     `ifRunningElse` bail "stopped"
 
-            ["list"]   -> runList
-            ["table"]  -> runTable
-            ["status"] -> runStatus
+            ["list"]    -> runList
+            ["table"]   -> runTable
+            ["status"]  -> runStatus
+
+            ("clear":xs) -> mapM_ clear xs
+            ("run":xs)   -> mapM_ execute xs
 
             ["schema"]   -> runSchema
             ["config"]   -> getConfigPath >>= putStrLn
@@ -49,15 +51,18 @@ main = do
 usage :: String
 usage = unlines
     [ "devbot usage: "
-    , "  start       - start devbot"
-    , "  daemon      - start devbot in the background"
-    , "  stop        - stop devbot and all services"
+    , "  start         - start devbot"
+    , "  daemon        - start devbot in the background"
+    , "  stop          - stop devbot and all services"
     , ""
-    , "  list        - show a list summary of runtime data and config"
-    , "  table       - show a table summary of runtime data and config"
-    , "  status      - give a single character summary of run state"
+    , "  list          - show a list summary of runtime data and config"
+    , "  table         - show a table summary of runtime data and config"
+    , "  status        - give a single character summary of run state"
     , ""
-    , "  schema      - show the config file schema"
-    , "  config      - show the config file path"
-    , "  parse <exp> - show how devbot will interpet an interval expression"
+    , "  run <event>   - ask for the following events run next"
+    , "  clear <event> - ask for the following events to be cleared of errors, and run next"
+    , ""
+    , "  schema        - show the config file schema"
+    , "  config        - show the config file path"
+    , "  parse <expr>  - show how devbot will interpet an interval expression"
     ]

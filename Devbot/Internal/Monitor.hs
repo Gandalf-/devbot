@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase          #-}
-
 module Devbot.Internal.Monitor (
     since,
     pathChangedSince,

@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 {-|
 Module      : Devbot.Event.Runtime
 Description : Handles creating and monitoring event's tasks, which are shell commands to

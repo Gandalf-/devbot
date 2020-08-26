@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Devbot.Service.Runtime where
 
 import           Control.Monad           (void)

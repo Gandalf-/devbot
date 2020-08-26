@@ -1,5 +1,3 @@
-
-
 module Devbot.Status
     ( runStatus, getStatus, Status(..)
     ) where

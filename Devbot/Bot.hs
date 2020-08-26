@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 {-|
 Module      : Devbot.Bot
 Description : High level orchestration of events and services; this manages loading the
@@ -65,22 +63,31 @@ runner :: ContextF -> Integer -> State -> IO State
 -- ^ check each Task for something to do
 -- run for n iterations before dropping out so main can refetch the
 -- events and start us again
-runner cxf iterations (State ets sts) =
-        if iterations > minItersToRestart && E.noRunners ets
-
-          -- we've hit our iteration limit and are currently idle
-          then pure refreshState
-
-          -- do the work!
-          else do
-                threadDelay sleepTime
-
-                handledServices <- mapM (S.handle cxf) sts
-                handledEvents   <- mapM (E.handle cxf) ets
-
-                runner cxf (iterations + 1) $
-                    State handledEvents handledServices
+runner cxf iterations (State ets sts) = do
+        -- look for request to make an early refresh
+        cx <- cxf
+        (get cx ["devbot", "reload"] :: IO (Maybe Bool)) >>= \case
+            Nothing  -> go minItersToRestart
+            (Just _) -> do
+                del cx ["devbot", "reload"]
+                go 0
     where
+        go :: Integer -> IO State
+        go neededToRestart =
+            if iterations > neededToRestart && E.noRunners ets
+                -- we've hit our iteration limit and are currently idle
+                then pure refreshState
+
+                -- do the work!
+                else do
+                    threadDelay sleepTime
+
+                    handledServices <- mapM (S.handle cxf) sts
+                    handledEvents   <- mapM (E.handle cxf) ets
+
+                    runner cxf (iterations + 1) $
+                        State handledEvents handledServices
+
         minItersToRestart = 60 * 2      -- 60 seconds
         sleepTime = oneSecond `div` 2   -- half a second
         oneSecond = 1000000

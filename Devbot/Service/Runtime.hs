@@ -150,22 +150,20 @@ merge func old new = do
 
 flushUptime :: ContextF -> Service -> IO ()
 -- ^ persist the start time so we can show uptime in 'devbot list'
-flushUptime cxf service = do
+flushUptime cxf Service{..} = do
         cx <- cxf
         now <- getTime
-        set cx ["devbot", "uptime", _name service] now
+        set cx ["devbot", "uptime", _name] now
 
 
 flushPid :: ContextF -> Service -> ProcessHandle -> IO ()
-flushPid cxf service process =
+flushPid cxf Service{..} process =
         getPid process >>= \case
             (Just pid) -> do
                 cx <- cxf
-                set cx ["devbot", "pids", name] pid
+                set cx ["devbot", "pids", _name] pid
 
-            Nothing   -> logger $ "service " <> name <> " exited before pid flush"
-    where
-        name = _name service
+            Nothing   -> logger $ "service " <> _name <> " exited before pid flush"
 
 
 kill :: Task -> IO ()

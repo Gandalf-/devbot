@@ -231,9 +231,9 @@ updateTimes e now next elapsed = e {
 
 
 flush :: ContextF -> Event -> IO ()
-flush cxf (Event n _ d) = do
+flush cxf Event{..} = do
         cx <- cxf
-        set cx ["devbot", "data", n] d
+        set cx ["devbot", "data", _name] _data
 
 
 requirementsMet :: ContextF -> String -> Config -> IO Bool

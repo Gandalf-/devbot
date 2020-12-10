@@ -31,6 +31,7 @@ main = do
 
             ("clear":xs) -> mapM_ clear xs
             ("run":xs)   -> mapM_ execute xs
+            ("delay":xs) -> delay xs
 
             ["schema"]   -> runSchema
             ["config"]   -> getConfigPath >>= putStrLn
@@ -51,18 +52,24 @@ main = do
 usage :: String
 usage = unlines
     [ "devbot usage: "
-    , "  start         - start devbot"
+    , "  start         - start devbot in the foreground"
     , "  daemon        - start devbot in the background"
     , "  stop          - stop devbot and all services"
     , ""
     , "  list          - show a list summary of runtime data and config"
     , "  table         - show a table summary of runtime data and config"
-    , "  status        - give a single character summary of run state"
+    , "  status        - give a single character summary of runtime state"
     , ""
-    , "  run <event>   - ask for the following events run next"
-    , "  clear <event> - ask for the following events to be cleared of errors, and run next"
+    , "  run   <event...>"
+    , "                - ask for the following events run immediately"
+    , "  clear <event...>"
+    , "                - ask for the following events to be cleared of errors"
+    , "                  and then run immediately"
+    , "  delay <event> <interval...>"
+    , "                - ask for the event to be delayed by the interval provided"
     , ""
     , "  schema        - show the config file schema"
     , "  config        - show the config file path"
-    , "  parse <expr>  - show how devbot will interpet an interval expression"
+    , "  parse  <expression...>"
+    , "                - show how devbot will interpet an interval expression"
     ]

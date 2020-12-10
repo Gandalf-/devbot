@@ -33,24 +33,24 @@ parse ["months"]  = Just month
 parse ["years"]   = Just year
 
 parse ("twice":"per":x) = flip div 2 <$> parse x
-
 parse ("twice":x) = flip div 2 <$> parse x
 
 parse ("every":"other":y) = (* 2) <$> parse y
 
 parse ["every", x] = parse [x]
-
-parse ("every":x:y) = result
-    where
-        result = (*) <$> number <*> next
-        number = readNumber x
-        next   = parse y
+parse ("every":x:y) = parse $ x : y
 
 parse (x:"times":"per":y) = result
     where
         result = div <$> next <*> number
         number = readNumber x
         next   = parse y
+
+parse [x, y] = result
+    where
+        result = (*) <$> number <*> next
+        number = readNumber x
+        next   = parse [y]
 
 parse [x]           = readNumber x
 parse _             = Nothing

@@ -1,3 +1,6 @@
+{-# LANGUAGE LambdaCase      #-}
+{-# LANGUAGE RecordWildCards #-}
+
 {-|
 Module      : Devbot.Event.Runtime
 Description : Handles creating and monitoring event's tasks, which are shell commands to
@@ -11,17 +14,18 @@ Portability : POSIX, Windows 10
 
 module Devbot.Event.Runtime where
 
+import           Control.Monad
 import           Data.List               (intercalate)
 import           Data.Maybe
+import           Data.Time.Clock
 import           System.Exit             (ExitCode (..))
 import           System.Info             (os)
 import           System.Process
-import           Data.Time.Clock
 
 import           Devbot.Event.Config
 import           Devbot.Internal.Common
-import           Devbot.Internal.Persist
 import           Devbot.Internal.Monitor
+import           Devbot.Internal.Persist
 
 
 data Task = Task
@@ -112,12 +116,17 @@ check cxf task@(Task e@(Event n c d) hs cs s) =
                 if run
                     then chooseRunner $ task {_event = newEvent }
                     else do
-                        logger $ "monitor for " <> n <> " found no changes"
+                        perhapsLog
                         success cxf $ task {_event = newEvent, _start = time}
 
             -- if we can't run, wait 30 seconds before trying again
             False -> waitTask <$> getTime
     where
+        perhapsLog =
+            when (interval c >= tenMinutes) $
+                logger $ "monitor for " <> n <> " found no changes"
+        tenMinutes = 60 * 10
+
         waitTask now = Task (Event n c (backoff now d)) hs cs s
 
         chooseRunner :: (Task -> IO Task)

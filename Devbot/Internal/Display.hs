@@ -20,7 +20,7 @@ pTime :: Iteration -> Integer -> String
 pTime Third _ = ""
 pTime b i
         | i == 0     = ""
-        | i < minute = showTime i "second"              <> after
+        | i < minute = showTime i "second"
         | i < hour   = showTime (div i minute) "minute" <> after <> pTime (next b) (mod i minute)
         | i < day    = showTime (div i hour)   "hour"   <> after <> pTime (next b) (mod i hour)
         | i < week   = showTime (div i day)    "day"    <> after <> pTime (next b) (mod i day)

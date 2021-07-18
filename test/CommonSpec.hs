@@ -9,8 +9,7 @@ import           Test.Hspec
 
 spec :: Spec
 spec = do
-
-        -- | pids
+        -- pids
         describe "checkHandles" $
             it "success" $ do
                 hs <- mapM spawnCommand ["echo 1", "echo 2", "echo 3"]

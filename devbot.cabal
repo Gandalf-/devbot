@@ -65,6 +65,7 @@ library
     Devbot.Internal.Parser
     Devbot.Internal.Persist
     Devbot.Internal.System
+    Devbot.Internal.Table
 
     Devbot.Bot
     Devbot.Daemon
@@ -128,5 +129,6 @@ test-suite bot
     SystemSpec
     EventSpec
     MonitorSpec
+    TableSpec
 
   build-tool-depends: hspec-discover:hspec-discover == 2.*

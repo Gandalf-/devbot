@@ -146,6 +146,8 @@ spec = do
                 testTaskRun runParallel 3 Nothing sampleMultiTask
 
     where
+        getMemoryContext = getContext ServerMemory
+
         -- defaults, one action
         sampleTask   = Task sampleEvent [] Nothing 0
         sampleEvent  = Event "sample" sampleConfig sampleData

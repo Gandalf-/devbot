@@ -18,7 +18,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-12.14
+resolver: lts-21.21
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,7 +41,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
    - git: https://github.com/Gandalf-/apocrypha-haskell/
-     commit: 66fd3be3de299ce1fd8ef4d5b4ddb2aa52ed093c
+     commit: 0e1724e676b47cd36472e7a80d34ef217ccbe233
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

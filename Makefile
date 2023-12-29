@@ -6,4 +6,4 @@ release:
 
 .PHONY: test
 test:
-	stack test --flag apocrypha:release --flag devbot:release --coverage
+	stack test --flag apocrypha:release --flag devbot:release

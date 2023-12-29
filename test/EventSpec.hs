@@ -72,11 +72,10 @@ spec = do
                 success cxf sampleErrorTask `shouldReturn` expectedTask
 
         -- requirements
-        describe "requirementsMet" $
+        describe "requirementsMet" $ do
             it "no requirements" $
                 requirementsMet getMemoryContext "sample" sampleConfig `shouldReturn` True
 
-        describe "requirementsMet" $
             it "a met requirement" $ do
                 -- does real IO, expects 'echo' to exist on the system
                 c <- getMemoryContext
@@ -85,7 +84,6 @@ spec = do
 
                 requirementsMet cxf "sample" sampleReqConfig `shouldReturn` True
 
-        describe "requirementsMet" $
             it "an unmet requirement" $ do
                 -- does real IO, expects 'zdkjfdo' to not exist on the system
                 c <- getMemoryContext
@@ -94,12 +92,11 @@ spec = do
 
                 requirementsMet cxf "sample" sampleReqConfig `shouldReturn` False
 
-        describe "requirementsMet" $
             it "an non existant requirement" $
                 requirementsMet getMemoryContext "sample" sampleReqConfig `shouldReturn` False
 
         -- monitors
-        describe "monitorMet" $
+        describe "monitorMet" $ do
             it "command first run" $ do
                 c <- getMemoryContext
                 let cxf = pure c
@@ -107,7 +104,6 @@ spec = do
                 run `shouldBe` True
                 _monitorOutput (_data newEvent) `shouldBe` Just "a\n"
 
-        describe "monitorMet" $
             it "command second run, same output" $ do
                 c <- getMemoryContext
                 let cxf   = pure c
@@ -116,7 +112,6 @@ spec = do
                 run `shouldBe` False
                 _monitorOutput (_data newEvent) `shouldBe` Just "a\n"
 
-        describe "monitorMet" $
             it "command second run, different output" $ do
                 c <- getMemoryContext
                 let cxf   = pure c
@@ -125,7 +120,6 @@ spec = do
                 run `shouldBe` True
                 _monitorOutput (_data newEvent) `shouldBe` Just "a\n"
 
-        describe "monitorMet" $
             it "command failure" $ do
                 c <- getMemoryContext
                 let cxf   = pure c
@@ -136,15 +130,13 @@ spec = do
                 _monitorOutput (_data newEvent) `shouldBe` Nothing
 
         -- serial run
-        describe "runSerial: simple" $
+        describe "runSerial" $ do
             it "a single action produces a single handle" $
                 testTaskRun runSerial 1 (Just 0) sampleTask
 
-        describe "runSerial: multiple commands in one shell" $
             it "combines all actions into one command, one shell, no pending" $
                 testTaskRun runSerial 1 Nothing sampleMultiTask
 
-        describe "runSerial: multiple commands in one separate shells" $
             it "starts the first action, sets the remaining as pending" $
                 testTaskRun runSerial 1 (Just 2) sampleShellTask
 

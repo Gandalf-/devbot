@@ -61,7 +61,7 @@ usage = unlines
     , "  status        - give a single character summary of runtime state"
     , ""
     , "  run   <event...>"
-    , "                - ask for the following events run immediately"
+    , "                - ask for the following events to run immediately"
     , "  clear <event...>"
     , "                - ask for the following events to be cleared of errors"
     , "                  and then run immediately"

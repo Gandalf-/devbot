@@ -9,18 +9,17 @@ import           System.Info
 import           System.Process
 import           Test.Hspec
 
-import           Devbot.Event.Config    (Config(..), Valid (..))
+import           Devbot.Event.Config    (Config (..), Valid (..))
 import           Devbot.Internal.System
 
 
 spec :: Spec
 spec = do
-        describe "pid" $
+        describe "pid" $ do
             it "sanity" $ do
                 alive <- checkPid =<< getMyPid
                 alive `shouldBe` True
 
-        describe "pid" $
             it "murder" $ do
                 handle <- spawnCommand sleepy
                 pid <- getPid handle

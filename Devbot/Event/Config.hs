@@ -103,7 +103,7 @@ instance Valid Config where
         where
             others = catMaybes $ catMaybes [validRequire <$> r, valid <$> m]
             validRequire s
-                | null s    = Just "require field may not be empty if provided"
+                | null s    = Just "`require` may not be empty if provided"
                 | otherwise = Nothing
 
 instance FromJSON Config where

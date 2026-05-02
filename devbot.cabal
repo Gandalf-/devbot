@@ -61,6 +61,7 @@ library
     Devbot.Internal.ColorText
     Devbot.Internal.Display
     Devbot.Internal.Directory
+    Devbot.Internal.Healthcheck
     Devbot.Internal.Monitor
     Devbot.Internal.Parser
     Devbot.Internal.Persist
@@ -84,6 +85,8 @@ library
     apocrypha,
     directory,
     filepath,
+    http-client,
+    http-client-tls,
     process,
     regex-tdfa,
     scientific,
@@ -128,6 +131,7 @@ test-suite bot
     ParserSpec
     SystemSpec
     EventSpec
+    HealthcheckSpec
     MonitorSpec
     TableSpec
 

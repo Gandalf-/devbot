@@ -24,6 +24,7 @@ import           System.Process
 
 import           Devbot.Event.Config
 import           Devbot.Internal.Common
+import           Devbot.Internal.Healthcheck
 import           Devbot.Internal.Monitor
 import           Devbot.Internal.Persist
 
@@ -61,44 +62,44 @@ noRunners (Task _ [] Nothing _ : xs) = noRunners xs
 noRunners (Task{} : _)               = False
 
 
-handle :: ContextF -> Task -> IO Task
-handle cxf task@(Task e [] Nothing _) = do
+handle :: Pinger -> ContextF -> Task -> IO Task
+handle p cxf task@(Task e [] Nothing _) = do
         -- not currently running, check to see if we should
         now <- getTime
 
         if now > _when (_data e)
             -- ready, see if our requirements are met
-            then check cxf task
+            then check p cxf task
             -- not ready, keep waiting
             else pure task
 
-handle cxf task@(Task _ hs Nothing _) =
+handle p cxf task@(Task _ hs Nothing _) =
         -- we're running, but there's nothing to do after this
         checkHandles hs >>= \case
             StillRunning -> pure task
-            AllSuccess   -> success cxf task
-            AnyFailure   -> failure cxf task
+            AllSuccess   -> success p cxf task
+            AnyFailure   -> failure p cxf task
 
-handle cxf task@(Task _ hs (Just []) _) =
+handle p cxf task@(Task _ hs (Just []) _) =
         -- we're running, but there's nothing to do after this
         checkHandles hs >>= \case
             StillRunning -> pure task
-            AllSuccess   -> success cxf task
-            AnyFailure   -> failure cxf task
+            AllSuccess   -> success p cxf task
+            AnyFailure   -> failure p cxf task
 
-handle cxf task@(Task event hs cmds startTime) =
+handle p cxf task@(Task event hs cmds startTime) =
         -- we're running, and there are more commands to run once these are done
         checkHandles hs >>= \case
             StillRunning -> pure task
 
             -- clear handles, preserve start time, and try to start the next command
-            AllSuccess -> check cxf $ Task event [] cmds startTime
+            AllSuccess -> check p cxf $ Task event [] cmds startTime
 
             -- something failed, we'll give up here, even though there's more to do
-            AnyFailure -> failure cxf task
+            AnyFailure -> failure p cxf task
 
 
-check :: ContextF -> Task -> IO Task
+check :: Pinger -> ContextF -> Task -> IO Task
 -- ^ events may have requirements, which are shell snippets we must execute before the
 -- event's actions can be run. if the requirement exits non-zero, we treat that as
 -- failure. events without configured requirements eseentially skip this
@@ -106,7 +107,7 @@ check :: ContextF -> Task -> IO Task
 -- also checks for monitor commands. if these succeed, the command is counted as
 -- a success without having run, if the output is different, then the real
 -- action is run as normal
-check cxf task@(Task e@(Event n c d) hs cs s) =
+check p cxf task@(Task e@(Event n c d) hs cs s) =
         requirementsMet cxf n c >>= \case
 
             -- no requirements, or requirement met, check for monitor configuration
@@ -117,7 +118,7 @@ check cxf task@(Task e@(Event n c d) hs cs s) =
                     then chooseRunner $ task {_event = newEvent }
                     else do
                         perhapsLog
-                        success cxf $ task {_event = newEvent, _start = time}
+                        success p cxf $ task {_event = newEvent, _start = time}
 
             -- if we can't run, wait 30 seconds before trying again
             False -> waitTask <$> getTime
@@ -131,16 +132,17 @@ check cxf task@(Task e@(Event n c d) hs cs s) =
 
         chooseRunner :: (Task -> IO Task)
         chooseRunner
-            | parallel c = runParallel
-            | otherwise  = runSerial
+            | parallel c = runParallel p
+            | otherwise  = runSerial p
 
         backoff :: Seconds -> Data -> Data
         backoff now _d = _d { _when = now + 30}
 
 
-runParallel :: Task -> IO Task
+runParallel :: Pinger -> Task -> IO Task
 -- ^ start all actions immediately, there is no follow on work after this
-runParallel task = do
+runParallel p task = do
+        ping p Start (health $ _config event)
         handles <- mapM spawnCommand actions
         Task event handles Nothing <$> getTime
     where
@@ -148,18 +150,20 @@ runParallel task = do
         event   = _event task
 
 
-runSerial :: Task -> IO Task
+runSerial :: Pinger -> Task -> IO Task
 -- ^ run each command serially, we haven't started yet
-runSerial task@(Task e _ Nothing _)
+runSerial p task@(Task e _ Nothing _)
         | null actions = pure task
             -- this indicates a bad config
 
         | oneshell $ _config e = do
+            ping p Start (health $ _config e)
             h <- spawnCommand cmd
             Task e [h] Nothing <$> getTime
 
         | otherwise = do
             -- run each action in a separate shell
+            ping p Start (health $ _config e)
             h <- spawnCommand firstCmd
             Task e [h] laterCmds <$> getTime
     where
@@ -172,8 +176,10 @@ runSerial task@(Task e _ Nothing _)
             | os == "mingw32" = x
             | otherwise       = "{ " <> x <> " ; }"
 
-runSerial task@(Task e _ (Just cs) s)
--- we've already started, start the next cmd
+runSerial _ task@(Task e _ (Just cs) s)
+-- we've already started, start the next cmd. no /start ping here:
+-- only the initial run kicks off the action, subsequent commands are
+-- continuations of the same action.
         | null cs   = pure task  -- this should be impossible thanks to 'handle'
         | otherwise = do
             h <- spawnCommand nextCmd
@@ -183,8 +189,8 @@ runSerial task@(Task e _ (Just cs) s)
         remaining = Just $ tail cs
 
 
-success :: ContextF -> Task -> IO Task
-success cxf (Task event@(Event _ c _) _ _ startTime) = do
+success :: Pinger -> ContextF -> Task -> IO Task
+success p cxf (Task event@(Event _ c _) _ _ startTime) = do
         -- the command succeeded, set errors to Nothing, and determine next
         -- time to run
         now <- getTime
@@ -194,6 +200,7 @@ success cxf (Task event@(Event _ c _) _ _ startTime) = do
             newTask  = Task newEvent [] Nothing 0
 
         flush cxf newEvent
+        ping p Success (health c)
         pure newTask
     where
         next = startTime + interval c
@@ -202,8 +209,8 @@ success cxf (Task event@(Event _ c _) _ _ startTime) = do
         clearErrors e = e { _data = (_data e) { _errors = Nothing } }
 
 
-failure :: ContextF -> Task -> IO Task
-failure cxf (Task event@(Event n _ d) _ _ startTime) = do
+failure :: Pinger -> ContextF -> Task -> IO Task
+failure p cxf (Task event@(Event n c d) _ _ startTime) = do
         -- the command failed, log the error, increment errors and set next
         -- time to retry
         logger $ concat [
@@ -217,6 +224,7 @@ failure cxf (Task event@(Event n _ d) _ _ startTime) = do
             newTask  = Task newEvent [] Nothing 0
 
         flush cxf newEvent
+        ping p Fail (health c)
         pure newTask
     where
         backoff = getBackoff d
@@ -246,8 +254,8 @@ flush cxf Event{..} = do
 
 
 requirementsMet :: ContextF -> String -> Config -> IO Bool
-requirementsMet _   _ (Config _ _ Nothing  _ _ _)  = pure True
-requirementsMet cxf n (Config _ _ (Just r) _ _ _) = do
+requirementsMet _   _ (Config _ _ Nothing  _ _ _ _)  = pure True
+requirementsMet cxf n (Config _ _ (Just r) _ _ _ _) = do
         cx <- cxf
         get cx ["devbot", "requirements", r] >>= \case
             Nothing  -> logger doesntExist >> pure False
@@ -265,10 +273,10 @@ requirementsMet cxf n (Config _ _ (Just r) _ _ _) = do
 
 monitorMet :: ContextF -> Event -> IO (Event, Bool)
 -- no monitor information provided
-monitorMet _  e@(Event _ (Config _ _ _ Nothing _ _) _) = pure (e, True)
+monitorMet _  e@(Event _ (Config _ _ _ Nothing _ _ _) _) = pure (e, True)
 
 -- monitor command provided
-monitorMet cxf e@(Event n (Config _ _ _ (Just (Monitor (Just c) _ _)) _ _) d) = do
+monitorMet cxf e@(Event n (Config _ _ _ (Just (Monitor (Just c) _ _)) _ _ _) d) = do
         (code, new_output, _) <- readCreateProcessWithExitCode (shell c) ""
 
         case code of
@@ -286,7 +294,7 @@ monitorMet cxf e@(Event n (Config _ _ _ (Just (Monitor (Just c) _ _)) _ _) d) = 
         old_output = fromMaybe "" $ _monitorOutput $ _data e
 
 -- monitor with implied time, typically since the last time we ran
-monitorMet _ e@(Event _ (Config _ i _ (Just (Monitor Nothing (Just p) r)) _ _) d) = do
+monitorMet _ e@(Event _ (Config _ i _ (Just (Monitor Nothing (Just p) r)) _ _ _) d) = do
         shift <- monitorShift (_lastRun d) i
         time  <- since shift <$> getCurrentTime
         (,) e <$> pathChangedSince r time p

@@ -91,19 +91,24 @@ data Config = Config
         , monitor  :: !(Maybe Monitor)
         , parallel :: !Bool
         , oneshell :: !Bool
+        , health   :: !(Maybe String)
         }
     deriving (Eq, Show, Generic)
 
 instance Valid Config where
-    valid (Config [] _ _ _ _ _) = Just "action field may not be empty"
-    valid (Config  _ i r m _ _)
+    valid (Config [] _ _ _ _ _ _) = Just "action field may not be empty"
+    valid (Config  _ i r m _ _ h)
             | i < 1        = Just "interval value must be greater than 1 second"
             | others /= [] = Just $ unlines others
             | otherwise    = Nothing
         where
-            others = catMaybes $ catMaybes [validRequire <$> r, valid <$> m]
+            others = catMaybes $ catMaybes
+                [validRequire <$> r, valid <$> m, validHealth <$> h]
             validRequire s
                 | null s    = Just "`require` may not be empty if provided"
+                | otherwise = Nothing
+            validHealth s
+                | null s    = Just "`health` may not be empty if provided"
                 | otherwise = Nothing
 
 instance FromJSON Config where
@@ -147,6 +152,8 @@ instance FromJSON Config where
                    (Just (Bool b)) -> pure b
                    _               -> pure True
              ]
+
+        health <- o .:? "health"
 
         return Config{..}
 

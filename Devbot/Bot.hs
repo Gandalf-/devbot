@@ -17,11 +17,12 @@ import           Control.Monad           (void)
 import           System.IO               (BufferMode (..), hSetBuffering,
                                           stdout)
 
-import qualified Devbot.Event.Runtime    as E
+import qualified Devbot.Event.Runtime        as E
 import           Devbot.Internal.Common
+import           Devbot.Internal.Healthcheck (httpPing)
 import           Devbot.Internal.Persist
-import           Devbot.Internal.System  (loadDefaultConfig)
-import qualified Devbot.Service.Runtime  as S
+import           Devbot.Internal.System      (loadDefaultConfig)
+import qualified Devbot.Service.Runtime      as S
 
 
 data State = State [E.Task] [S.Task]
@@ -83,7 +84,7 @@ runner cxf iterations (State ets sts) = do
                     threadDelay sleepTime
 
                     handledServices <- mapM (S.handle cxf) sts
-                    handledEvents   <- mapM (E.handle cxf) ets
+                    handledEvents   <- mapM (E.handle httpPing cxf) ets
 
                     runner cxf (iterations + 1) $
                         State handledEvents handledServices

@@ -1,10 +1,12 @@
 module EventSpec (spec) where
 
 import           Apocrypha.Client
+import           Data.IORef
 
 import           Devbot.Event.Config
 import           Devbot.Event.Runtime
 import           Devbot.Internal.Common
+import           Devbot.Internal.Healthcheck
 
 import           System.Exit
 import           System.Process
@@ -38,6 +40,10 @@ spec = do
                 valid sampleReqConfig   `shouldBe` Nothing
                 valid sampleMultiConfig `shouldBe` Nothing
                 valid sampleShellConfig `shouldBe` Nothing
+                valid sampleHealthConfig `shouldBe` Nothing
+
+                -- empty health URL is rejected
+                valid (sampleConfig { health = Just "" }) `shouldNotBe` Nothing
 
         describe "monitorShift" $
             it "works" $ do
@@ -59,7 +65,7 @@ spec = do
                 d `shouldBe` Just sampleData
 
         --  success
-        describe "success" $
+        describe "success" $ do
             it "works" $ do
                 -- update elapsed time, clear errors
                 c <- getMemoryContext
@@ -69,7 +75,37 @@ spec = do
                     expectedTask = Task e [] Nothing 0
                     e = Event "sample" sampleConfig $ Data now 10 (Just now) Nothing Nothing
 
-                success cxf sampleErrorTask `shouldReturn` expectedTask
+                success noPinger cxf sampleErrorTask `shouldReturn` expectedTask
+
+            it "pings the success URL when health is configured" $ do
+                c <- getMemoryContext
+                (pinger, recorded) <- mkRecorder
+
+                _ <- success pinger (pure c) sampleHealthTask
+                recorded `shouldReturn` [healthBase]
+
+            it "does not ping when health is not configured" $ do
+                c <- getMemoryContext
+                (pinger, recorded) <- mkRecorder
+
+                _ <- success pinger (pure c) sampleErrorTask
+                recorded `shouldReturn` []
+
+        -- failure
+        describe "failure" $ do
+            it "pings the fail URL when health is configured" $ do
+                c <- getMemoryContext
+                (pinger, recorded) <- mkRecorder
+
+                _ <- failure pinger (pure c) sampleHealthTask
+                recorded `shouldReturn` [healthBase <> "/fail"]
+
+            it "does not ping when health is not configured" $ do
+                c <- getMemoryContext
+                (pinger, recorded) <- mkRecorder
+
+                _ <- failure pinger (pure c) sampleErrorTask
+                recorded `shouldReturn` []
 
         -- requirements
         describe "requirementsMet" $ do
@@ -132,47 +168,85 @@ spec = do
         -- serial run
         describe "runSerial" $ do
             it "a single action produces a single handle" $
-                testTaskRun runSerial 1 (Just 0) sampleTask
+                testTaskRun (runSerial noPinger) 1 (Just 0) sampleTask
 
             it "combines all actions into one command, one shell, no pending" $
-                testTaskRun runSerial 1 Nothing sampleMultiTask
+                testTaskRun (runSerial noPinger) 1 Nothing sampleMultiTask
 
             it "starts the first action, sets the remaining as pending" $
-                testTaskRun runSerial 1 (Just 2) sampleShellTask
+                testTaskRun (runSerial noPinger) 1 (Just 2) sampleShellTask
+
+            it "pings the start URL when health is configured" $ do
+                (pinger, recorded) <- mkRecorder
+                t <- runSerial pinger sampleHealthTask
+                waitForProcess (head $ _process t) >>= (`shouldBe` ExitSuccess)
+                recorded `shouldReturn` [healthBase <> "/start"]
+
+            it "does not ping subsequent serial commands" $ do
+                -- first invocation pings, continuation invocation does not
+                (pinger, recorded) <- mkRecorder
+                t <- runSerial pinger sampleShellHealthTask
+                waitForProcess (head $ _process t) >>= (`shouldBe` ExitSuccess)
+
+                -- now feed the resulting task back through runSerial
+                _ <- runSerial pinger t
+                -- still only the one /start ping recorded
+                recorded `shouldReturn` [healthBase <> "/start"]
 
         -- parallel run
-        describe "runParallel" $
+        describe "runParallel" $ do
             it "creates handles for all actions immediately" $
-                testTaskRun runParallel 3 Nothing sampleMultiTask
+                testTaskRun (runParallel noPinger) 3 Nothing sampleMultiTask
+
+            it "pings the start URL when health is configured" $ do
+                (pinger, recorded) <- mkRecorder
+                t <- runParallel pinger sampleHealthTask
+                waitForProcess (head $ _process t) >>= (`shouldBe` ExitSuccess)
+                recorded `shouldReturn` [healthBase <> "/start"]
 
     where
         getMemoryContext = getContext ServerMemory
 
+        noPinger :: Pinger
+        noPinger _ = pure ()
+
+        healthBase = "http://example.com/abc"
+
         -- defaults, one action
         sampleTask   = Task sampleEvent [] Nothing 0
         sampleEvent  = Event "sample" sampleConfig sampleData
-        sampleConfig = Config ["echo a"] 10 Nothing Nothing False False
+        sampleConfig = Config ["echo a"] 10 Nothing Nothing False False Nothing
 
         -- multiple actions, multiple shells
         sampleShellTask   = sampleTask  { _event = sampleShellEvent }
         sampleShellEvent  = sampleEvent { _config = sampleShellConfig }
-        sampleShellConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing Nothing False False
+        sampleShellConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing Nothing False False Nothing
 
         -- multiple actions, one shell
         sampleMultiTask   = Task sampleMultiEvent [] Nothing 0
         sampleMultiEvent  = Event "sample" sampleMultiConfig sampleData
-        sampleMultiConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing Nothing False True
+        sampleMultiConfig = Config ["echo a", "echo b", "echo c"] 10 Nothing Nothing False True Nothing
 
         -- monitor command
         sampleMonitorEvent   = sampleEvent  { _config = sampleMonitorConfig }
         sampleMonitorConfig  = sampleConfig { monitor = sampleCommandMonitor }
         sampleCommandMonitor = Just $ Monitor (Just "echo a") Nothing Nothing
 
+        -- health-configured single action
+        sampleHealthConfig = sampleConfig { health = Just healthBase }
+        sampleHealthEvent  = sampleEvent { _config = sampleHealthConfig }
+        sampleHealthTask   = sampleTask { _event = sampleHealthEvent }
+
+        -- health-configured multi-shell action
+        sampleShellHealthConfig = sampleShellConfig { health = Just healthBase }
+        sampleShellHealthEvent  = sampleShellEvent  { _config = sampleShellHealthConfig }
+        sampleShellHealthTask   = sampleShellTask   { _event = sampleShellHealthEvent }
+
         -- other
         sampleErrorTask  = Task sampleErrorEvent [] Nothing 0
         sampleErrorEvent = Event "sample" sampleConfig sampleErrorData
 
-        sampleReqConfig = Config ["echo a"] 10 (Just "myreq") Nothing False False
+        sampleReqConfig = Config ["echo a"] 10 (Just "myreq") Nothing False False Nothing
 
         sampleData = Data 0 0 Nothing Nothing Nothing
         sampleErrorData = Data 0 1 Nothing Nothing Nothing
@@ -186,3 +260,13 @@ testTaskRun f running next task = do
         length <$> _cmds t `shouldBe` next
 
         waitForProcess (head $ _process t) `shouldReturn` ExitSuccess
+
+
+mkRecorder :: IO (Pinger, IO [String])
+-- ^ same recorder pattern used in HealthcheckSpec; duplicated here to avoid
+-- introducing a test-helper module. Records ping URLs in call order.
+mkRecorder = do
+        ref <- newIORef []
+        let pinger url = modifyIORef ref (url :)
+            readback   = reverse <$> readIORef ref
+        pure (pinger, readback)

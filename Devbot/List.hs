@@ -86,12 +86,13 @@ printNext (Data _ w _ _ _) time =
 
 
 printOptional :: Config -> Data -> String
-printOptional (Config _ _ req _ par one) d =
+printOptional (Config _ _ req _ par one hth) d =
         concat [ maybe "" printErrors $ _errors d
                , printDuration $ E._duration d
                , maybe "" printRequire req
                , printParallel par
                , printOneShell one
+               , maybe "" printHealth hth
                ]
     where
         printErrors :: Integer -> String
@@ -113,3 +114,6 @@ printOptional (Config _ _ req _ par one) d =
         printOneShell :: Bool -> String
         printOneShell False = ", " <> colorize magenta "isolated"
         printOneShell _     = ""
+
+        printHealth :: String -> String
+        printHealth _ = ", " <> colorize magenta "health"

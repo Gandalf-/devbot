@@ -45,7 +45,7 @@ spec = do
 
         sampleFile   = FileConfig sampleEvents Nothing Nothing
         sampleEvents = HM.fromList [("example", sampleConfig)]
-        sampleConfig = Config ["echo a"] 10 Nothing Nothing False False
+        sampleConfig = Config ["echo a"] 10 Nothing Nothing False False Nothing
 
         badFile   = sampleFile { events = badEvents }
         badEvents = HM.fromList [("sample", badConfig)]

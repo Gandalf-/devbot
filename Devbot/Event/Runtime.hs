@@ -123,9 +123,9 @@ check cxf task@(Task e@(Event n c d) hs cs s) =
             False -> waitTask <$> getTime
     where
         perhapsLog =
-            when (interval c >= tenMinutes) $
+            when (interval c >= oneHour) $
                 logger $ "monitor for " <> n <> " found no changes"
-        tenMinutes = 60 * 10
+        oneHour = 60 * 60 * 60
 
         waitTask now = Task (Event n c (backoff now d)) hs cs s
 

@@ -17,7 +17,7 @@ data Alignment = Lefty | Center
 buffer :: Alignment -> Int -> String -> String
 -- ^ pad the given string to a particular length, using an alignment scheme
 -- this will truncate the string if necessary
-buffer Lefty  n s = take n $ s <> cycle " "
+buffer Lefty  n s = " " <> (take n $ s <> cycle " ")
 buffer Center n s = take n body
     where
         body = pad <> s <> cycle " "

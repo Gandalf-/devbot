@@ -48,11 +48,11 @@ eventTable :: CurrentTime -> [Event] -> [String]
 -- rows correspond to all the values for a particular event
 eventTable now es =
         reverse $ map (intercalate "|") $ rotate $
-        mapMaybe (applyBuffer Center . addBorder white) elements
+        mapMaybe (applyBuffer Lefty . addBorder white) elements
     where
         elements =
             [ (green,   "Events")  : map getEventName       ses
-            , (blue,    "Every" )  : map getEventInterval   ses
+            , (white,   "Every" )  : map getEventInterval   ses
             , (yellow,  "Next"  )  : map (getEventNext now) ses
             , (cyan,    "Last"  )  : map getEventLast       ses
             , (red,     "Errors")  : map getEventErrors     ses
@@ -66,7 +66,7 @@ getEventName :: Event -> (Decoration, String)
 getEventName = (,) green . E._name
 
 getEventInterval :: Event -> (Decoration, String)
-getEventInterval = (,) blue . clean . prettyTime . E.interval . E._config
+getEventInterval = (,) white . clean . prettyTime . E.interval . E._config
 
 getEventNext :: CurrentTime -> Event -> (Decoration, String)
 getEventNext now e
@@ -93,12 +93,14 @@ getEventErrors e =
         count = E._errors $ E._data e
 
 getEventOptions :: Event -> (Decoration, String)
-getEventOptions e = (magenta, unwords [require, monitor, parallel, oneshell])
+getEventOptions e =
+        (magenta, unwords [require, monitor, parallel, oneshell, health])
     where
         parallel = if E.parallel $ E._config e then "P" else ""
         oneshell = if E.oneshell $ E._config e then "" else "O"
         require  = if isJust (E.require $ E._config e) then "R" else ""
         monitor  = if isJust (E.monitor $ E._config e) then "M" else ""
+        health   = if isJust (E.health $ E._config e) then "H" else ""
 
 -- | services
 
@@ -107,7 +109,7 @@ serviceTable :: CurrentTime -> [(Service, Uptime)] -> [String]
 -- headers and values used for the columns
 serviceTable now ss =
         reverse $ map (intercalate "|") $ rotate $
-        mapMaybe (applyBuffer Center . addBorder white) elements
+        mapMaybe (applyBuffer Lefty . addBorder white) elements
     where
         elements =
             [ (blue,  "Services") : map getServiceName         sss

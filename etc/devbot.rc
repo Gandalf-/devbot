@@ -1,0 +1,57 @@
+#!/bin/sh
+# PROVIDE: devbot
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=devbot
+rcvar=devbot_enable
+
+load_rc_config $name
+
+: ${devbot_enable:=NO}
+: ${devbot_user:=leaf}
+: ${devbot_chdir:=/home/leaf}
+: ${devbot_path:=/home/leaf/scripts/bin:/home/leaf/dotfiles/bin:/home/leaf/.cargo/bin:/home/leaf/.local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:/home/leaf/bin}
+
+pidfile=/home/leaf/.devbot/${name}.pid
+logfile=/home/leaf/.devbot/${name}.log
+procname=/home/leaf/.local/bin/devbot
+
+start_cmd="devbot_start"
+stop_cmd="devbot_stop"
+status_cmd="devbot_status"
+
+devbot_start() {
+    if [ -f "${pidfile}" ] && kill -0 "$(cat ${pidfile})" 2>/dev/null; then
+        echo "${name} already running (pid $(cat ${pidfile}))."
+        return 1
+    fi
+    echo "Starting ${name}."
+    install -o ${devbot_user} -g austi -m 644 /dev/null "${logfile}"
+    su -fm "${devbot_user}" -c "/bin/sh -c 'cd ${devbot_chdir} && HOME=${devbot_chdir} PATH=${devbot_path} exec ${procname} start >> ${logfile} 2>&1' & echo \$! > ${pidfile}"
+}
+
+devbot_stop() {
+    if [ ! -f "${pidfile}" ]; then
+        echo "${name} not running."
+        return 1
+    fi
+    pid=$(cat "${pidfile}")
+    echo "Stopping ${name}."
+    kill "${pid}" 2>/dev/null
+    sleep 1
+    rm -f "${pidfile}"
+}
+
+devbot_status() {
+    if [ -f "${pidfile}" ] && kill -0 "$(cat ${pidfile})" 2>/dev/null; then
+        echo "${name} is running as pid $(cat ${pidfile})."
+    else
+        echo "${name} is not running."
+        return 1
+    fi
+}
+
+run_rc_command "$1"

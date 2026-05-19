@@ -44,10 +44,10 @@ spec = do
             buffer Center 5 "apple" `shouldBe` "apple"
 
         it "left" $ do
-            buffer Lefty 3 "a" `shouldBe` "a  "
-            buffer Lefty 4 "a" `shouldBe` "a   "
-            buffer Lefty 1 "apple" `shouldBe` "a"
-            buffer Lefty 5 "apple" `shouldBe` "apple"
+            buffer Lefty 3 "a" `shouldBe` " a  "
+            buffer Lefty 4 "a" `shouldBe` " a   "
+            buffer Lefty 1 "apple" `shouldBe` " a"
+            buffer Lefty 5 "apple" `shouldBe` " apple"
 
     describe "smart buffer" $
         it "center" $ do
